@@ -269,7 +269,22 @@ public sealed class Board
         return _rows[row].Sum(card => card.Power);
     }
 
-    internal void Add(Card card) => _rows[card.Row].Add(card);
+    internal void Add(Card card, DeckPosition position = DeckPosition.Top)
+    {
+        var row = _rows[card.Row];
+        if (position == DeckPosition.Top) row.Add(card);
+        else row.Insert(0, card);
+    }
+
+    internal void Reorder(Card card, DeckPosition position)
+    {
+        var row = _rows[card.Row];
+        var index = row.FindIndex(existing => existing.InstanceId == card.InstanceId);
+        if (index < 0) throw new InvalidOperationException("Card instance is not on this board.");
+        row.RemoveAt(index);
+        if (position == DeckPosition.Top) row.Add(card);
+        else row.Insert(0, card);
+    }
 
     internal void Remove(Card card)
     {
@@ -367,12 +382,38 @@ public sealed class Player
                 if (deckPosition == DeckPosition.Top) _deck.Add(card);
                 else _deck.Insert(0, card);
                 break;
-            case CardZone.Hand: _hand.Add(card); break;
-            case CardZone.Field: Board.Add(card); break;
-            case CardZone.Graveyard: _graveyard.Add(card); break;
+            case CardZone.Hand: InsertByPosition(_hand, card, deckPosition); break;
+            case CardZone.Field: Board.Add(card, deckPosition); break;
+            case CardZone.Graveyard: InsertByPosition(_graveyard, card, deckPosition); break;
             case CardZone.Unassigned: break;
             default: throw new ArgumentOutOfRangeException(nameof(zone));
         }
+    }
+
+    internal void ReorderWithinZone(Card card, CardZone zone, DeckPosition position)
+    {
+        switch (zone)
+        {
+            case CardZone.Deck: Reorder(_deck, card, position, "deck"); break;
+            case CardZone.Hand: Reorder(_hand, card, position, "hand"); break;
+            case CardZone.Field: Board.Reorder(card, position); break;
+            case CardZone.Graveyard: Reorder(_graveyard, card, position, "graveyard"); break;
+            case CardZone.Unassigned:
+                throw new InvalidOperationException("An unassigned card cannot be reordered within a zone.");
+            default: throw new ArgumentOutOfRangeException(nameof(zone));
+        }
+    }
+
+    private static void InsertByPosition(List<Card> cards, Card card, DeckPosition position)
+    {
+        if (position == DeckPosition.Top) cards.Add(card);
+        else cards.Insert(0, card);
+    }
+
+    private static void Reorder(List<Card> cards, Card card, DeckPosition position, string zoneName)
+    {
+        Remove(cards, card, zoneName);
+        InsertByPosition(cards, card, position);
     }
 
     internal void ShuffleDeck(Random random)
@@ -529,11 +570,7 @@ public sealed class Game
 
         if (card.Zone == destination && ReferenceEquals(sourcePlayer, destinationPlayer))
         {
-            if (destination == CardZone.Deck)
-            {
-                sourcePlayer.RemoveFromCurrentZone(card);
-                sourcePlayer.AddToZone(card, destination, deckPosition);
-            }
+            sourcePlayer.ReorderWithinZone(card, destination, deckPosition);
             return;
         }
 

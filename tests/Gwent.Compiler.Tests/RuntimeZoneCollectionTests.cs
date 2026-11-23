@@ -112,6 +112,30 @@ public sealed class RuntimeZoneCollectionTests
         Assert.All(cards, card => Assert.Equal(CardZone.Graveyard, card.Zone));
     }
 
+
+    [Fact]
+    public void PushAndSendBottomPreserveOrderingInHandCollections()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var first = new Card("first", "First", 1, Row.Melee);
+        var second = new Card("second", "Second", 2, Row.Melee);
+        game.AddToDeck(player, first);
+        game.AddToDeck(player, second);
+        game.Draw(player);
+        game.Draw(player);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        context.Scope.Define("first", RuntimeValue.From(first));
+        context.Scope.Define("second", RuntimeValue.From(second));
+
+        new ExpressionParser("context.Hand.SendBottom(first)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { first, second }, player.Hand);
+
+        new ExpressionParser("context.Hand.Push(first)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { second, first }, player.Hand);
+    }
+
     [Fact]
     public void ShuffleUsesExecutionScopedRandomSource()
     {
