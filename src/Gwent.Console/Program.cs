@@ -19,7 +19,7 @@ var first = new Player("Player 1");
 var second = new Player("Player 2");
 var game = new Game(first, second);
 
-foreach (var definition in compilation.Cards.Values)
+foreach (var definition in compilation.Cards.Values.Reverse())
 {
     game.AddToDeck(first, definition.CreateCard());
     game.AddToDeck(second, definition.CreateCard());
@@ -41,11 +41,13 @@ for (var turn = 0; turn < 2; turn++)
     game.EndTurn();
 }
 
+var firstRoundScore = first.Board.Score;
+var secondRoundScore = second.Board.Score;
 game.Pass(game.CurrentPlayer);
 game.Pass(game.CurrentPlayer);
 
-Console.WriteLine($"\n{first.Id}: {first.Board.Score}");
-Console.WriteLine($"{second.Id}: {second.Board.Score}");
+Console.WriteLine($"\n{first.Id}: {firstRoundScore}");
+Console.WriteLine($"{second.Id}: {secondRoundScore}");
 Console.WriteLine(game.LastRoundWinner is null ? "Round result: draw" : $"Round winner: {game.LastRoundWinner.Id}");
 Console.WriteLine($"Rounds: {game.FirstRoundsWon} - {game.SecondRoundsWon}");
 return 0;
