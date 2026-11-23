@@ -89,6 +89,7 @@ public sealed record BinaryExpression(
             RuntimeBinaryOperator.And => RuntimeValue.From(right.AsBoolean()),
             RuntimeBinaryOperator.Or => RuntimeValue.From(right.AsBoolean()),
             RuntimeBinaryOperator.Concatenate => RuntimeValue.From(left.AsString() + right.AsString()),
+            RuntimeBinaryOperator.ConcatenateWithSpace => RuntimeValue.From(left.AsString() + " " + right.AsString()),
             _ => throw new InvalidOperationException($"Unsupported binary operator '{Operator}'.")
         };
     }

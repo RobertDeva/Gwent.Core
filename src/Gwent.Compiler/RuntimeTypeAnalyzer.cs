@@ -228,6 +228,19 @@ public sealed class RuntimeTypeAnalyzer
                 return InferMember(member, variables, effectId);
             case BinaryExpression binary:
                 return InferBinary(binary, variables, effectId);
+            case UnaryExpression unary:
+                var operandType = Infer(unary.Operand, variables, effectId);
+                var requiredType = unary.Operator == RuntimeUnaryOperator.Not
+                    ? RuntimeType.Boolean : RuntimeType.Number;
+                if (operandType != requiredType && operandType != RuntimeType.Unknown)
+                    Add($"Unary operator '{unary.Operator}' in effect '{effectId}' requires '{requiredType}'.");
+                return requiredType;
+            case IncrementExpression increment:
+                if (!variables.TryGetValue(increment.VariableName, out var incrementType))
+                    Add($"Unknown identifier '{increment.VariableName}' in effect '{effectId}'.");
+                else if (incrementType != RuntimeType.Number && incrementType != RuntimeType.Unknown)
+                    Add($"Increment/decrement in effect '{effectId}' requires a numeric variable.");
+                return RuntimeType.Number;
             case AssignmentExpression assignment:
                 if (!variables.ContainsKey(assignment.Name))
                     Add($"Unknown identifier '{assignment.Name}' in effect '{effectId}'.");
@@ -358,6 +371,7 @@ public sealed class RuntimeTypeAnalyzer
                 RequireTypes(left, right, RuntimeType.Boolean, expression.Operator.ToString(), effectId);
                 return RuntimeType.Boolean;
             case RuntimeBinaryOperator.Concatenate:
+            case RuntimeBinaryOperator.ConcatenateWithSpace:
                 RequireTypes(left, right, RuntimeType.String, expression.Operator.ToString(), effectId);
                 return RuntimeType.String;
             case RuntimeBinaryOperator.Equal:

@@ -92,16 +92,21 @@ public sealed class Lexer
             '(' => TokenKind.OpenParen,
             ')' => TokenKind.CloseParen,
             '.' => TokenKind.Dot,
+            '+' when second == '+' => TokenKind.Increment,
             '+' => TokenKind.Plus,
+            '-' when second == '-' => TokenKind.Decrement,
             '-' when second != '>' => TokenKind.Minus,
             '*' => TokenKind.Star,
             '/' => TokenKind.Slash,
             '%' => TokenKind.Percent,
             '^' => TokenKind.Caret,
+            '@' when second == '@' => TokenKind.ConcatenateWithSpace,
+            '@' => TokenKind.Concatenate,
             '=' when second == '>' => TokenKind.Arrow,
             '=' when second == '=' => TokenKind.EqualEqual,
             '=' => TokenKind.Assign,
             '!' when second == '=' => TokenKind.BangEqual,
+            '!' => TokenKind.Bang,
             '>' when second == '=' => TokenKind.GreaterEqual,
             '>' => TokenKind.Greater,
             '<' when second == '=' => TokenKind.LessEqual,
@@ -113,7 +118,8 @@ public sealed class Lexer
         if (kind is null) return false;
 
         var length = kind is TokenKind.Arrow or TokenKind.EqualEqual or TokenKind.BangEqual or
-            TokenKind.GreaterEqual or TokenKind.LessEqual or TokenKind.AndAnd or TokenKind.OrOr ? 2 : 1;
+            TokenKind.GreaterEqual or TokenKind.LessEqual or TokenKind.AndAnd or TokenKind.OrOr or
+            TokenKind.Increment or TokenKind.Decrement or TokenKind.ConcatenateWithSpace ? 2 : 1;
         var text = _source.Substring(_position, length);
         for (var i = 0; i < length; i++) Advance();
         _tokens.Add(new Token(kind.Value, text, line, column));

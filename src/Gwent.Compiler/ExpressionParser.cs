@@ -95,8 +95,11 @@ public sealed class ExpressionParser
             case TokenKind.Minus:
                 var operand = ParseExpression(8);
                 return operand is null ? null :
-                    new BinaryExpression(new LiteralExpression(RuntimeValue.From(0)),
-                        RuntimeBinaryOperator.Subtract, operand);
+                    new UnaryExpression(RuntimeUnaryOperator.Negate, operand);
+            case TokenKind.Bang:
+                var booleanOperand = ParseExpression(8);
+                return booleanOperand is null ? null :
+                    new UnaryExpression(RuntimeUnaryOperator.Not, booleanOperand);
             default:
                 Error(token, "Expected a literal, identifier, or parenthesized expression.");
                 return null;
@@ -131,6 +134,18 @@ public sealed class ExpressionParser
                 if (index is null) return expression;
                 if (!Match(TokenKind.CloseBracket)) Error(Current, "Expected ']' after index.");
                 expression = new IndexExpression(expression, index);
+                continue;
+            }
+
+            if (Match(TokenKind.Increment) || Match(TokenKind.Decrement))
+            {
+                var delta = Previous.Kind == TokenKind.Increment ? 1 : -1;
+                if (expression is not VariableExpression variable)
+                {
+                    Error(Previous, "Increment and decrement require a variable.");
+                    return expression;
+                }
+                expression = new IncrementExpression(variable.Name, delta);
                 continue;
             }
             return expression;
@@ -168,6 +183,8 @@ public sealed class ExpressionParser
             TokenKind.LessEqual => (RuntimeBinaryOperator.LessOrEqual, 4),
             TokenKind.Plus => (RuntimeBinaryOperator.Add, 5),
             TokenKind.Minus => (RuntimeBinaryOperator.Subtract, 5),
+            TokenKind.Concatenate => (RuntimeBinaryOperator.Concatenate, 5),
+            TokenKind.ConcatenateWithSpace => (RuntimeBinaryOperator.ConcatenateWithSpace, 5),
             TokenKind.Star => (RuntimeBinaryOperator.Multiply, 6),
             TokenKind.Slash => (RuntimeBinaryOperator.Divide, 6),
             TokenKind.Percent => (RuntimeBinaryOperator.Modulo, 6),
