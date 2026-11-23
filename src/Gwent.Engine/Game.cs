@@ -481,6 +481,36 @@ public sealed class Game
         player.ShuffleDeck(random);
     }
 
+    public void ValidateCardZones()
+    {
+        var cardsInZones = First.Deck.Concat(First.Hand).Concat(First.Field).Concat(First.Graveyard)
+            .Concat(Second.Deck).Concat(Second.Hand).Concat(Second.Field).Concat(Second.Graveyard)
+            .ToArray();
+        var grouped = cardsInZones.GroupBy(card => card.InstanceId).ToArray();
+        if (grouped.Any(group => group.Count() != 1))
+            throw new InvalidOperationException("A card instance appears in more than one game zone.");
+
+        foreach (var card in _cardsByInstance.Values)
+        {
+            var matches = grouped.Where(group => group.Key == card.InstanceId).ToArray();
+            if (card.Zone == CardZone.Unassigned || matches.Length != 1)
+                throw new InvalidOperationException(
+                    $"Card instance '{card.InstanceId}' was not returned to exactly one game zone.");
+            var zoneOwner = ReferenceEquals(First, FindZoneOwner(card)) ? First : Second;
+            if (!StringComparer.Ordinal.Equals(card.OwnerId, zoneOwner.Id))
+                throw new InvalidOperationException("Card owner metadata does not match its zone owner.");
+        }
+    }
+
+    private Player FindZoneOwner(Card card)
+    {
+        if (First.Deck.Concat(First.Hand).Concat(First.Field).Concat(First.Graveyard)
+            .Any(existing => existing.InstanceId == card.InstanceId)) return First;
+        if (Second.Deck.Concat(Second.Hand).Concat(Second.Field).Concat(Second.Graveyard)
+            .Any(existing => existing.InstanceId == card.InstanceId)) return Second;
+        throw new InvalidOperationException("Card instance is not present in any game zone.");
+    }
+
     public void EndTurn()
     {
         EnsureNotFinished();

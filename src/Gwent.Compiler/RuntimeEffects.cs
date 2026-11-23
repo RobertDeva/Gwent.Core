@@ -107,6 +107,9 @@ public sealed class RuntimeEffectExecutor
         }
         finally { context.ExitScope(); }
 
+        if (parentTargets is null)
+            context.Game?.ValidateCardZones();
+
         return targets;
     }
 

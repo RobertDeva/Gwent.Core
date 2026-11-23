@@ -1,7 +1,6 @@
 using Gwent.Engine;
 
 using System.Collections.ObjectModel;
-using Gwent.Engine;
 
 namespace Gwent.Compiler;
 
@@ -49,7 +48,7 @@ public sealed class RuntimeCardCollection
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(owner);
-        if (context.Game is null) return new RuntimeCardCollection(ReadZoneWithoutGame(owner, zone));
+        if (context.Game is null) return ReadOnly(ReadZoneWithoutGame(owner, zone));
         return new RuntimeCardCollection(context, owner, zone);
     }
 
@@ -91,7 +90,9 @@ public sealed class RuntimeCardCollection
         ArgumentNullException.ThrowIfNull(card);
         if (IsZoneBound)
         {
-            var destination = _zone == CardZone.Field ? CardZone.Graveyard : CardZone.Unassigned;
+            var destination = _zone == CardZone.Graveyard
+                ? CardZone.Unassigned
+                : CardZone.Graveyard;
             _context!.Game!.MoveCard(card, _owner!, destination);
         }
         else
