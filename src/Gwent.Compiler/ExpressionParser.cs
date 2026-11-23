@@ -42,6 +42,18 @@ public sealed class ExpressionParser
             }
             left = new BinaryExpression(left, op, right);
         }
+
+        if (minimumPrecedence == 0 && Match(TokenKind.Assign))
+        {
+            var assignedValue = ParseExpression();
+            if (assignedValue is null) return null;
+            if (left is not VariableExpression variable)
+            {
+                Error(Previous, "Only variables can be assigned by an expression.");
+                return null;
+            }
+            return new AssignmentExpression(variable.Name, assignedValue);
+        }
         return left;
     }
 
