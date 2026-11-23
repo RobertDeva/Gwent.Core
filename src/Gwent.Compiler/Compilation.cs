@@ -95,18 +95,18 @@ public sealed class DslCompiler
                     continue;
                 }
 
-                var duration = effectMatch.Groups["duration"].Value switch
+                var duration = effectMatch.Groups["duration"].Value.ToLowerInvariant() switch
                 {
                     "while-source-on-field" => EffectDuration.WhileSourceOnField,
                     _ => EffectDuration.Instant
                 };
-                var operation = effectMatch.Groups["operation"].Value switch
+                var operation = effectMatch.Groups["operation"].Value.ToLowerInvariant() switch
                 {
                     "set" => EffectOperation.Set,
                     "multiply" => EffectOperation.Multiply,
                     _ => EffectOperation.Add
                 };
-                var targetScope = effectMatch.Groups["target"].Value switch
+                var targetScope = effectMatch.Groups["target"].Value.ToLowerInvariant() switch
                 {
                     "own-row" => EffectTargetScope.OwnRow,
                     "both-players-in-row" => EffectTargetScope.BothPlayersInRow,
