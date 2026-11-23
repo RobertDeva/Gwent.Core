@@ -47,12 +47,14 @@ public sealed class ExpressionParser
         {
             var assignedValue = ParseExpression();
             if (assignedValue is null) return null;
-            if (left is not VariableExpression variable)
-            {
-                Error(Previous, "Only variables can be assigned by an expression.");
-                return null;
-            }
-            return new AssignmentExpression(variable.Name, assignedValue);
+            if (left is VariableExpression variable)
+                return new AssignmentExpression(variable.Name, assignedValue);
+            if (left is RuntimeMemberExpression member &&
+                member.MemberName.Equals("Power", StringComparison.OrdinalIgnoreCase))
+                return new CardPowerAssignmentExpression(member.Target, assignedValue);
+
+            Error(Previous, "Assignments are supported only for variables and card Power.");
+            return null;
         }
         return left;
     }

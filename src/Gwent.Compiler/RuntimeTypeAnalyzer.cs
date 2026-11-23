@@ -232,6 +232,14 @@ public sealed class RuntimeTypeAnalyzer
                 if (!variables.ContainsKey(assignment.Name))
                     Add($"Unknown identifier '{assignment.Name}' in effect '{effectId}'.");
                 return Infer(assignment.ValueExpression, variables, effectId);
+            case CardPowerAssignmentExpression assignment:
+                var targetType = Infer(assignment.Target, variables, effectId);
+                var valueType = Infer(assignment.ValueExpression, variables, effectId);
+                if (targetType != RuntimeType.Card && targetType != RuntimeType.Unknown)
+                    Add($"Card Power assignment in effect '{effectId}' requires a card target.");
+                if (valueType != RuntimeType.Number && valueType != RuntimeType.Unknown)
+                    Add($"Card Power assignment in effect '{effectId}' requires a numeric value.");
+                return RuntimeType.Number;
             case LambdaExpression lambda:
                 var lambdaVariables = new Dictionary<string, RuntimeType>(variables, StringComparer.Ordinal)
                 {

@@ -4,7 +4,7 @@ namespace Gwent.Engine;
 
 public enum Row { Melee, Ranged, Siege }
 public enum CardZone { Unassigned, Deck, Hand, Field, Graveyard }
-public enum EffectDuration { Instant, WhileSourceOnField }
+public enum EffectDuration { Instant, WhileSourceOnField, UntilRoundEnd }
 public enum EffectOperation { Add, Set, Multiply }
 public enum EffectTargetScope { SourceCard, OwnRow, BothPlayersInRow }
 
@@ -43,7 +43,9 @@ public sealed class Card
     private readonly HashSet<string> _appliedEffects = new(StringComparer.Ordinal);
     private readonly List<PowerModifier> _modifiers = [];
 
-    private sealed record PowerModifier(Guid? SourceInstanceId, string EffectId, EffectOperation Operation, int Amount);
+    private sealed record PowerModifier(
+        Guid? SourceInstanceId, string EffectId, EffectOperation Operation, int Amount,
+        bool UntilRoundEnd = false);
 
     public Card(string definitionId, string name, int power, Row row, string? effectId = null)
     {
@@ -111,6 +113,8 @@ public sealed class Card
 
         if (effect.Duration == EffectDuration.Instant)
             _modifiers.Add(new PowerModifier(null, effect.Id, effect.Operation, effect.PowerIncrease));
+        else if (effect.Duration == EffectDuration.UntilRoundEnd)
+            _modifiers.Add(new PowerModifier(null, effect.Id, effect.Operation, effect.PowerIncrease, UntilRoundEnd: true));
         return true;
     }
 
@@ -122,9 +126,29 @@ public sealed class Card
         _modifiers.Add(new PowerModifier(source.InstanceId, effect.Id, effect.Operation, effect.PowerIncrease));
     }
 
+    internal void ApplyRuntimeModifier(
+        string effectId, EffectOperation operation, int amount, EffectDuration duration)
+    {
+        if (string.IsNullOrWhiteSpace(effectId))
+            throw new ArgumentException("Effect id is required.", nameof(effectId));
+        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
+        if (!Enum.IsDefined(operation)) throw new ArgumentOutOfRangeException(nameof(operation));
+        if (duration == EffectDuration.WhileSourceOnField)
+            throw new ArgumentException("Source-bound modifiers must be registered through ApplyEffect.", nameof(duration));
+        if (!Enum.IsDefined(duration)) throw new ArgumentOutOfRangeException(nameof(duration));
+
+        _modifiers.Add(new PowerModifier(null, effectId, operation, amount,
+            UntilRoundEnd: duration == EffectDuration.UntilRoundEnd));
+    }
+
     internal void RemovePersistentModifiers()
     {
         _modifiers.RemoveAll(modifier => modifier.SourceInstanceId is not null);
+    }
+
+    internal void RemoveRoundModifiers()
+    {
+        _modifiers.RemoveAll(modifier => modifier.UntilRoundEnd);
     }
 
     internal void RemovePersistentModifier(Guid sourceInstanceId)
@@ -320,6 +344,7 @@ public sealed class Game
             throw new InvalidOperationException("Only a card on the active player's field can be destroyed.");
         DeactivateEffectsFrom(card);
         card.RemovePersistentModifiers();
+        card.RemoveRoundModifiers();
         player.MoveToGraveyard(card);
         RefreshPersistentEffects();
     }
@@ -339,6 +364,21 @@ public sealed class Game
             _activeEffects.Add(new ActiveEffect(card, effect));
             RefreshPersistentEffects();
         }
+    }
+
+    public void ApplyPowerModifier(
+        Player player,
+        Card target,
+        string effectId,
+        EffectOperation operation,
+        int amount,
+        EffectDuration duration = EffectDuration.UntilRoundEnd)
+    {
+        ValidateActivePlayer(player);
+        ArgumentNullException.ThrowIfNull(target);
+        if (!First.Field.Concat(Second.Field).Any(card => card.InstanceId == target.InstanceId))
+            throw new InvalidOperationException("Power modifiers can only target a card currently on the field.");
+        target.ApplyRuntimeModifier(effectId, operation, amount, duration);
     }
 
     public void EndTurn()
@@ -432,7 +472,11 @@ public sealed class Game
             _roundStarter = ReferenceEquals(_roundStarter, First) ? Second : First;
         }
 
-        foreach (var card in First.Field.Concat(Second.Field)) card.RemovePersistentModifiers();
+        foreach (var card in First.Field.Concat(Second.Field))
+        {
+            card.RemovePersistentModifiers();
+            card.RemoveRoundModifiers();
+        }
         _activeEffects.Clear();
         First.ClearFieldToGraveyard();
         Second.ClearFieldToGraveyard();
