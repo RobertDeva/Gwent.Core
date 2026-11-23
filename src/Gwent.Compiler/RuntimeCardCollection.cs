@@ -60,13 +60,28 @@ public sealed class RuntimeCardCollection
         EnsureMutable();
         ArgumentNullException.ThrowIfNull(card);
         if (IsZoneBound)
-            _context!.Game!.MoveCard(card, _owner!, _zone!.Value, DeckPosition.Top);
+        {
+            if (card.Zone != _zone || !StringComparer.Ordinal.Equals(card.OwnerId, _owner!.Id))
+                _context!.Game!.MoveCard(card, _owner!, _zone!.Value, DeckPosition.Top);
+        }
         else
             _cards.Add(card);
         Refresh();
     }
 
-    public void Push(Card card) => Add(card);
+    public void Push(Card card)
+    {
+        EnsureMutable();
+        ArgumentNullException.ThrowIfNull(card);
+        if (IsZoneBound)
+            _context!.Game!.MoveCard(card, _owner!, _zone!.Value, DeckPosition.Top);
+        else
+        {
+            _cards.RemoveAll(existing => existing.InstanceId == card.InstanceId);
+            _cards.Add(card);
+        }
+        Refresh();
+    }
 
     public void SendBottom(Card card)
     {

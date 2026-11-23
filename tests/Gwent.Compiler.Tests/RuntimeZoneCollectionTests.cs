@@ -113,6 +113,44 @@ public sealed class RuntimeZoneCollectionTests
     }
 
 
+
+    [Fact]
+    public void AddDoesNotReorderExistingZoneCardsButPushDoes()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var first = new Card("first", "First", 1, Row.Melee);
+        var second = new Card("second", "Second", 2, Row.Melee);
+        game.AddToDeck(player, first);
+        game.AddToDeck(player, second);
+        game.Draw(player);
+        game.Draw(player);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        context.Scope.Define("first", RuntimeValue.From(first));
+        context.Scope.Define("second", RuntimeValue.From(second));
+
+        new ExpressionParser("context.Hand.Add(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { second, first }, player.Hand);
+
+        new ExpressionParser("context.Hand.Push(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { first, second }, player.Hand);
+    }
+
+    [Fact]
+    public void LocalPushMovesExistingCardToEndWhileAddAppends()
+    {
+        var first = new Card("first", "First", 1, Row.Melee);
+        var second = new Card("second", "Second", 2, Row.Melee);
+        var collection = new RuntimeCardCollection([first, second]);
+
+        collection.Push(first);
+        Assert.Equal(new[] { second, first }, collection.Cards);
+
+        collection.Add(first);
+        Assert.Equal(new[] { second, first, first }, collection.Cards);
+    }
+
     [Fact]
     public void PushAndSendBottomPreserveOrderingInHandCollections()
     {
