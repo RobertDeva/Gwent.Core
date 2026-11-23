@@ -272,14 +272,25 @@ public sealed class RuntimeTypeAnalyzer
                 var receiver = Infer(method.Collection, variables, effectId);
                 if (receiver != RuntimeType.CardCollection && receiver != RuntimeType.Unknown)
                     Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires a card collection.");
-                var argumentTypes = method.Arguments
-                    .Select(argument => Infer(argument, variables, effectId)).ToArray();
                 if (method.MethodName == "Find")
                 {
-                    if (argumentTypes.Length != 1 || argumentTypes[0] != RuntimeType.Lambda)
+                    if (method.Arguments.Count != 1 ||
+                        method.Arguments[0] is not LambdaExpression predicate)
+                    {
                         Add($"Find in effect '{effectId}' requires one lambda predicate.");
+                        return RuntimeType.CardCollection;
+                    }
+
+                    var predicateVariables = CopyVariables(variables);
+                    predicateVariables[predicate.ParameterName] = RuntimeType.Card;
+                    var predicateType = Infer(predicate.Body, predicateVariables, effectId);
+                    if (predicateType != RuntimeType.Boolean && predicateType != RuntimeType.Unknown)
+                        Add($"Find predicate in effect '{effectId}' must return Boolean.");
                     return RuntimeType.CardCollection;
                 }
+
+                var argumentTypes = method.Arguments
+                    .Select(argument => Infer(argument, variables, effectId)).ToArray();
                 if (method.MethodName is "Add" or "Push" or "SendBottom" or "Remove")
                 {
                     if (argumentTypes.Length != 1 ||

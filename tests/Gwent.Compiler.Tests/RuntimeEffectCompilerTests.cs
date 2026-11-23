@@ -38,6 +38,44 @@ public sealed class RuntimeEffectCompilerTests
         Assert.IsType<ForEachCardStatement>(effect.Action[2]);
     }
 
+
+    [Fact]
+    public void RejectsFindPredicatesThatDoNotReturnBoolean()
+    {
+        var effect = new RuntimeEffectDefinition("find", [], [
+            new EvaluateStatement(new CollectionMethodExpression(
+                new VariableExpression("targets"),
+                "Find",
+                [new LambdaExpression("unit",
+                    new CardPropertyExpression(new VariableExpression("unit"), CardProperty.Power))]))
+        ]);
+
+        var diagnostics = new RuntimeTypeAnalyzer().Analyze(new RuntimeEffectCatalog([effect]));
+
+        Assert.Contains(diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Find predicate", StringComparison.Ordinal) &&
+            diagnostic.Message.Contains("Boolean", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AcceptsBooleanFindPredicates()
+    {
+        var effect = new RuntimeEffectDefinition("find", [], [
+            new EvaluateStatement(new CollectionMethodExpression(
+                new VariableExpression("targets"),
+                "Find",
+                [new LambdaExpression("unit",
+                    new BinaryExpression(
+                        new CardPropertyExpression(new VariableExpression("unit"), CardProperty.Power),
+                        RuntimeBinaryOperator.Greater,
+                        new LiteralExpression(RuntimeValue.From(0))))]))
+        ]);
+
+        var diagnostics = new RuntimeTypeAnalyzer().Analyze(new RuntimeEffectCatalog([effect]));
+
+        Assert.Empty(diagnostics);
+    }
+
     [Fact]
     public void ReportsDuplicateEffectIdentifiers()
     {
