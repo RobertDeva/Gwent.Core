@@ -95,6 +95,46 @@ public sealed class RuntimeEffectCompilerTests
     }
 
 
+
+    [Fact]
+    public void TypeChecksLegacyPlayerZoneHelperFunctions()
+    {
+        var source = """
+            effect {
+                Name: "zones",
+                Action: (targets, context) => {
+                    let hand = HandOfPlayer(context.TriggerPlayer);
+                    let deck = DeckOfPlayer(context.OtherPlayer);
+                    let field = FieldOfPlayer(context.TriggerPlayer);
+                    let graveyard = GraveyardOfPlayer(context.OtherPlayer);
+                }
+            }
+            """;
+
+        var result = new RuntimeEffectCompiler().Compile(source);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+    }
+
+    [Fact]
+    public void RejectsLegacyPlayerZoneHelpersWithNonPlayerArguments()
+    {
+        var source = """
+            effect {
+                Name: "zones",
+                Action: (targets, context) => {
+                    let hand = HandOfPlayer("p1");
+                }
+            }
+            """;
+
+        var result = new RuntimeEffectCompiler().Compile(source);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("requires a Player argument", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void RejectsUnknownIdentifiersDuringEffectCompilation()
     {

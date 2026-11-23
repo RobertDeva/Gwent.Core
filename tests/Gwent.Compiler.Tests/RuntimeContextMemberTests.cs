@@ -53,6 +53,38 @@ public sealed class RuntimeContextMemberTests
         Assert.Equal("A unit", descriptionParser.Parse()!.Evaluate(context).AsString());
     }
 
+
+    [Fact]
+    public void SupportsLegacyPlayerZoneHelperFunctions()
+    {
+        var first = new Player("p1");
+        var second = new Player("p2");
+        var game = new Game(first, second);
+        var handCard = new Card("hand", "Hand", 1, Row.Melee);
+        var fieldCard = new Card("field", "Field", 2, Row.Melee);
+        var deckCard = new Card("deck", "Deck", 3, Row.Melee);
+        var graveCard = new Card("grave", "Grave", 4, Row.Melee);
+        game.AddToDeck(first, handCard);
+        game.Draw(first);
+        game.AddToDeck(first, fieldCard);
+        game.MoveCard(fieldCard, first, CardZone.Field);
+        game.AddToDeck(second, deckCard);
+        game.AddToDeck(second, graveCard);
+        game.MoveCard(graveCard, second, CardZone.Graveyard);
+
+        var context = new RuntimeExecutionContext(
+            first, new Card("source", "Source", 1, Row.Melee), game);
+
+        Assert.Equal("Hand", new ExpressionParser(
+            "HandOfPlayer(context.TriggerPlayer)[0].Name").Parse()!.Evaluate(context).AsString());
+        Assert.Equal("Deck", new ExpressionParser(
+            "DeckOfPlayer(context.OtherPlayer)[0].Name").Parse()!.Evaluate(context).AsString());
+        Assert.Equal("Field", new ExpressionParser(
+            "FieldOfPlayer(context.TriggerPlayer)[0].Name").Parse()!.Evaluate(context).AsString());
+        Assert.Equal("Grave", new ExpressionParser(
+            "GraveyardOfPlayer(context.OtherPlayer)[0].Name").Parse()!.Evaluate(context).AsString());
+    }
+
     [Fact]
     public void ExposesOtherPlayerAsATypedContextMember()
     {

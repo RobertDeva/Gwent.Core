@@ -110,6 +110,17 @@ public sealed class ExpressionParser
     {
         while (true)
         {
+            if (Match(TokenKind.OpenParen))
+            {
+                if (expression is not VariableExpression function)
+                {
+                    Error(Previous, "Only built-in player-zone functions can be called directly.");
+                    return expression;
+                }
+                expression = new RuntimeFunctionExpression(function.Name, ParseArguments());
+                continue;
+            }
+
             if (Match(TokenKind.Dot))
             {
                 if (Current.Kind != TokenKind.Identifier)

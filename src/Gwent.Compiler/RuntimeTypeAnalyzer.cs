@@ -228,6 +228,21 @@ public sealed class RuntimeTypeAnalyzer
                     CardProperty.Power => RuntimeType.Number,
                     _ => RuntimeType.String
                 };
+            case RuntimeFunctionExpression function:
+                var functionArguments = function.Arguments
+                    .Select(argument => Infer(argument, variables, effectId)).ToArray();
+                if (function.FunctionName.ToLowerInvariant() is not
+                    ("handofplayer" or "deckofplayer" or "fieldofplayer" or "graveyardofplayer"))
+                {
+                    Add($"Unknown function '{function.FunctionName}' in effect '{effectId}'.");
+                    return RuntimeType.Unknown;
+                }
+                if (functionArguments.Length != 1)
+                    Add($"Function '{function.FunctionName}' in effect '{effectId}' requires one Player argument.");
+                else if (functionArguments[0] != RuntimeType.Player &&
+                         functionArguments[0] != RuntimeType.Unknown)
+                    Add($"Function '{function.FunctionName}' in effect '{effectId}' requires a Player argument.");
+                return RuntimeType.CardCollection;
             case RuntimeMemberExpression member:
                 return InferMember(member, variables, effectId);
             case BinaryExpression binary:

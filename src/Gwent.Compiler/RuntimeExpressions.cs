@@ -27,6 +27,40 @@ public sealed record VariableExpression(string Name) : RuntimeExpression
     }
 }
 
+
+public sealed record RuntimeFunctionExpression(
+    string FunctionName,
+    IReadOnlyList<RuntimeExpression> Arguments) : RuntimeExpression
+{
+    public override RuntimeValue Evaluate(RuntimeExecutionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.ConsumeInstruction();
+        if (Arguments.Count != 1)
+            throw new InvalidOperationException($"Function '{FunctionName}' requires one Player argument.");
+
+        var player = Arguments[0].Evaluate(context).AsPlayer();
+        var game = context.Game;
+        if (game is null)
+        {
+            if (!ReferenceEquals(player, context.TriggerPlayer))
+                throw new InvalidOperationException($"Function '{FunctionName}' requires a game to access another player.");
+        }
+        else if (!ReferenceEquals(player, game.First) && !ReferenceEquals(player, game.Second))
+            throw new InvalidOperationException("Player argument does not belong to the current game.");
+
+        var zone = FunctionName.ToLowerInvariant() switch
+        {
+            "handofplayer" => CardZone.Hand,
+            "deckofplayer" => CardZone.Deck,
+            "fieldofplayer" => CardZone.Field,
+            "graveyardofplayer" => CardZone.Graveyard,
+            _ => throw new InvalidOperationException($"Unknown runtime function '{FunctionName}'.")
+        };
+        return RuntimeValue.FromZoneCards(context, player, zone);
+    }
+}
+
 public enum CardProperty { Name, Power, OwnerId, Row, DefinitionId }
 
 public sealed record CardPropertyExpression(RuntimeExpression Target, CardProperty Property)
