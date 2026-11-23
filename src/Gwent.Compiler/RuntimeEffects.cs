@@ -10,7 +10,11 @@ public sealed record RuntimeEffectInvocation(
     string EffectId,
     IReadOnlyDictionary<string, RuntimeExpression> Arguments,
     RuntimeSelector Selector,
-    RuntimeEffectInvocation? PostAction = null);
+    RuntimeEffectInvocation? PostAction = null)
+{
+    public int SourceLine { get; init; } = 1;
+    public int SourceColumn { get; init; }
+}
 
 public sealed class RuntimeEffectDefinition
 {

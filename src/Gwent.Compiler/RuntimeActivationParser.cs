@@ -60,6 +60,7 @@ public sealed class RuntimeActivationParser
 
     private RuntimeEffectInvocation? ParseInvocationBody(bool isPostAction)
     {
+        var invocationToken = Current;
         string? effectId = null;
         var arguments = new Dictionary<string, RuntimeExpression>(StringComparer.Ordinal);
         var source = isPostAction ? "parent" : "board";
@@ -118,7 +119,11 @@ public sealed class RuntimeActivationParser
         return new RuntimeEffectInvocation(effectId,
             new ReadOnlyDictionary<string, RuntimeExpression>(
                 new Dictionary<string, RuntimeExpression>(arguments, StringComparer.Ordinal)),
-            new RuntimeSelector(source, single, predicate), postAction);
+            new RuntimeSelector(source, single, predicate), postAction)
+        {
+            SourceLine = invocationToken.Line,
+            SourceColumn = invocationToken.Column
+        };
     }
 
     private void MarkField(HashSet<string> seenFields, Token token, string fieldName)

@@ -83,7 +83,7 @@ public sealed class RuntimeTypeAnalyzer
         try { definition = catalog.Resolve(invocation.EffectId); }
         catch (KeyNotFoundException exception)
         {
-            Add(exception.Message);
+            _diagnostics.Add(new Diagnostic(invocation.SourceLine, exception.Message, invocation.SourceColumn));
             return;
         }
 
@@ -92,19 +92,19 @@ public sealed class RuntimeTypeAnalyzer
         {
             if (!expected.TryGetValue(argument.Key, out var parameter))
             {
-                Add($"Effect '{definition.Id}' does not declare parameter '{argument.Key}'.");
+                Add($"Effect '{definition.Id}' does not declare parameter '{argument.Key}'.", argument.Value);
                 continue;
             }
 
             var actualType = Infer(argument.Value, callerVariables, definition.Id);
             var expectedType = ToRuntimeType(parameter.Type);
             if (actualType != RuntimeType.Unknown && actualType != expectedType)
-                Add($"Parameter '{parameter.Name}' of effect '{definition.Id}' expects '{expectedType}', but received '{actualType}'.");
+                Add($"Parameter '{parameter.Name}' of effect '{definition.Id}' expects '{expectedType}', but received '{actualType}'.", argument.Value);
         }
 
         foreach (var parameter in definition.Parameters)
             if (!invocation.Arguments.ContainsKey(parameter.Name))
-                Add($"Effect '{definition.Id}' requires parameter '{parameter.Name}'.");
+                _diagnostics.Add(new Diagnostic(invocation.SourceLine, $"Effect '{definition.Id}' requires parameter '{parameter.Name}'.", invocation.SourceColumn));
 
         ValidateSelector(invocation.Selector, callerVariables, definition.Id, isPostAction);
         if (invocation.PostAction is not null)
@@ -121,18 +121,18 @@ public sealed class RuntimeTypeAnalyzer
             ["board", "field", "otherField", "hand", "otherHand", "deck", "otherDeck", "parent"],
             StringComparer.Ordinal);
         if (!allowedSources.Contains(selector.Source))
-            Add($"Effect '{effectId}' uses unknown selector source '{selector.Source}'.");
+            Add($"Effect '{effectId}' uses unknown selector source '{selector.Source}'.", selector.Single);
         if (selector.Source == "parent" && !isPostAction)
-            Add($"Effect '{effectId}' can use source 'parent' only in a PostAction.");
+            Add($"Effect '{effectId}' can use source 'parent' only in a PostAction.", selector.Single);
 
         var singleType = Infer(selector.Single, variables, effectId);
         if (singleType != RuntimeType.Boolean && singleType != RuntimeType.Unknown)
-            Add($"Selector Single in effect '{effectId}' must be Boolean.");
+            Add($"Selector Single in effect '{effectId}' must be Boolean.", selector.Single);
 
         if (selector.Predicate is null) return;
         if (selector.Predicate is not LambdaExpression lambda)
         {
-            Add($"Selector Predicate in effect '{effectId}' must be a lambda expression.");
+            Add($"Selector Predicate in effect '{effectId}' must be a lambda expression.", selector.Predicate);
             return;
         }
 
@@ -140,7 +140,7 @@ public sealed class RuntimeTypeAnalyzer
         predicateVariables[lambda.ParameterName] = RuntimeType.Card;
         var predicateType = Infer(lambda.Body, predicateVariables, effectId);
         if (predicateType != RuntimeType.Boolean && predicateType != RuntimeType.Unknown)
-            Add($"Selector Predicate in effect '{effectId}' must return Boolean.");
+            Add($"Selector Predicate in effect '{effectId}' must return Boolean.", lambda.Body);
     }
 
     private void AnalyzeStatements(
@@ -155,15 +155,15 @@ public sealed class RuntimeTypeAnalyzer
                 case DefineVariableStatement define:
                     var definedType = Infer(define.Value, variables, effectId);
                     if (!variables.TryAdd(define.Name, definedType))
-                        Add($"Variable '{define.Name}' is already defined in effect '{effectId}'.");
+                        Add($"Variable '{define.Name}' is already defined in effect '{effectId}'.", define.Value);
                     break;
                 case AssignVariableStatement assign:
                     var assignedType = Infer(assign.Value, variables, effectId);
                     if (!variables.TryGetValue(assign.Name, out var existingType))
-                        Add($"Variable '{assign.Name}' is not defined in effect '{effectId}'.");
+                        Add($"Variable '{assign.Name}' is not defined in effect '{effectId}'.", assign.Value);
                     else if (assignedType != RuntimeType.Unknown && existingType != RuntimeType.Unknown &&
                              assignedType != existingType)
-                        Add($"Cannot assign '{assignedType}' to variable '{assign.Name}' of type '{existingType}'.");
+                        Add($"Cannot assign '{assignedType}' to variable '{assign.Name}' of type '{existingType}'.", assign.Value);
                     break;
                 case EvaluateStatement evaluate:
                     _ = Infer(evaluate.Expression, variables, effectId);
@@ -171,14 +171,14 @@ public sealed class RuntimeTypeAnalyzer
                 case WhileStatement loop:
                     var conditionType = Infer(loop.Condition, variables, effectId);
                     if (conditionType != RuntimeType.Boolean && conditionType != RuntimeType.Unknown)
-                        Add($"While condition in effect '{effectId}' must be Boolean.");
+                        Add($"While condition in effect '{effectId}' must be Boolean.", loop.Condition);
                     AnalyzeStatements(loop.Body,
                         new Dictionary<string, RuntimeType>(variables, StringComparer.Ordinal), effectId);
                     break;
                 case ForEachCardStatement loop:
                     var collectionType = Infer(loop.Collection, variables, effectId);
                     if (collectionType != RuntimeType.CardCollection && collectionType != RuntimeType.Unknown)
-                        Add($"For loop in effect '{effectId}' requires a card collection.");
+                        Add($"For loop in effect '{effectId}' requires a card collection.", loop.Collection);
                     var loopVariables = new Dictionary<string, RuntimeType>(variables, StringComparer.Ordinal)
                     {
                         [loop.VariableName] = RuntimeType.Card
@@ -334,7 +334,7 @@ public sealed class RuntimeTypeAnalyzer
                     _ => UnknownCollectionMethod(method.MethodName, effectId, method)
                 };
             default:
-                Add($"Unsupported expression '{expression.GetType().Name}' in effect '{effectId}'.");
+                Add($"Unsupported expression '{expression.GetType().Name}' in effect '{effectId}'.", expression);
                 return RuntimeType.Unknown;
         }
     }
