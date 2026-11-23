@@ -226,14 +226,14 @@ public sealed class RuntimeCardProgramCompilerTests
         var result = new RuntimeCardProgramCompiler().Compile(Effects, cards);
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
 
-        var first = result.Program!.CreateCardInstance("unit", Row.Melee);
-        var second = result.Program.CreateCardInstance("unit", Row.Ranged);
+        var first = result.Program!.CreateCardInstance("unit", Gwent.Engine.Row.Melee);
+        var second = result.Program.CreateCardInstance("unit", Gwent.Engine.Row.Ranged);
 
         Assert.Equal(first.DefinitionId, second.DefinitionId);
         Assert.NotEqual(first.InstanceId, second.InstanceId);
         Assert.NotSame(first, second);
-        Assert.Equal(Row.Melee, first.Row);
-        Assert.Equal(Row.Ranged, second.Row);
+        Assert.Equal(Gwent.Engine.Row.Melee, first.Row);
+        Assert.Equal(Gwent.Engine.Row.Ranged, second.Row);
     }
 
     [Fact]
