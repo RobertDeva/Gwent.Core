@@ -1,4 +1,5 @@
 using Gwent.Engine;
+using Xunit;
 
 namespace Gwent.Engine.Tests;
 

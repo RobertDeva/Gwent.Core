@@ -1,5 +1,6 @@
 using Gwent.Compiler;
 using Gwent.Engine;
+using Xunit;
 
 namespace Gwent.Compiler.Tests;
 
