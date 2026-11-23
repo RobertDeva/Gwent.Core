@@ -4,6 +4,7 @@ namespace Gwent.Engine;
 
 public enum Row { Melee, Ranged, Siege }
 public enum CardZone { Unassigned, Deck, Hand, Field, Graveyard }
+public enum DeckPosition { Top, Bottom }
 public enum EffectDuration { Instant, WhileSourceOnField, UntilRoundEnd }
 public enum EffectOperation { Add, Set, Multiply }
 public enum EffectTargetScope { SourceCard, OwnRow, BothPlayersInRow }
@@ -155,6 +156,14 @@ public sealed class Card
     {
         _modifiers.RemoveAll(modifier => modifier.SourceInstanceId == sourceInstanceId);
     }
+
+    internal void TransferOwnership(Player owner, Guid gameId)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        if (_gameId != gameId)
+            throw new InvalidOperationException("Card does not belong to this game.");
+        _ownerId = owner.Id;
+    }
 }
 
 public sealed class Board
@@ -260,6 +269,45 @@ public sealed class Player
         foreach (var card in Board.Cards) MoveToGraveyard(card);
     }
 
+    internal void RemoveFromCurrentZone(Card card)
+    {
+        switch (card.Zone)
+        {
+            case CardZone.Deck: Remove(_deck, card, "deck"); break;
+            case CardZone.Hand: Remove(_hand, card, "hand"); break;
+            case CardZone.Field: Board.Remove(card); break;
+            case CardZone.Graveyard: Remove(_graveyard, card, "graveyard"); break;
+            case CardZone.Unassigned: break;
+            default: throw new ArgumentOutOfRangeException(nameof(card));
+        }
+    }
+
+    internal void AddToZone(Card card, CardZone zone, DeckPosition deckPosition)
+    {
+        switch (zone)
+        {
+            case CardZone.Deck:
+                if (deckPosition == DeckPosition.Top) _deck.Add(card);
+                else _deck.Insert(0, card);
+                break;
+            case CardZone.Hand: _hand.Add(card); break;
+            case CardZone.Field: Board.Add(card); break;
+            case CardZone.Graveyard: _graveyard.Add(card); break;
+            case CardZone.Unassigned: break;
+            default: throw new ArgumentOutOfRangeException(nameof(zone));
+        }
+    }
+
+    internal void ShuffleDeck(Random random)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        for (var i = _deck.Count - 1; i > 0; i--)
+        {
+            var j = random.Next(i + 1);
+            (_deck[i], _deck[j]) = (_deck[j], _deck[i]);
+        }
+    }
+
     private static void Remove(List<Card> cards, Card card, string zoneName)
     {
         var index = cards.FindIndex(existing => existing.InstanceId == card.InstanceId);
@@ -275,6 +323,7 @@ public sealed class Game
     private readonly Guid _id = Guid.NewGuid();
     private readonly HashSet<Player> _passedPlayers = [];
     private readonly List<ActiveEffect> _activeEffects = [];
+    private readonly Dictionary<Guid, Card> _cardsByInstance = [];
     private Player _roundStarter;
     private bool _hasPlayedThisTurn;
 
@@ -314,6 +363,7 @@ public sealed class Game
         if (card.Zone != CardZone.Unassigned) throw new InvalidOperationException("Only an unassigned card instance can be added to a deck.");
         card.Assign(player, _id);
         player.AddToDeck(card);
+        _cardsByInstance.Add(card.InstanceId, card);
     }
 
     public Card? Draw(Player player)
@@ -379,6 +429,56 @@ public sealed class Game
         if (!First.Field.Concat(Second.Field).Any(card => card.InstanceId == target.InstanceId))
             throw new InvalidOperationException("Power modifiers can only target a card currently on the field.");
         target.ApplyRuntimeModifier(effectId, operation, amount, duration);
+    }
+
+    public void MoveCard(
+        Card card,
+        Player destinationPlayer,
+        CardZone destination,
+        DeckPosition deckPosition = DeckPosition.Top)
+    {
+        EnsureNotFinished();
+        ArgumentNullException.ThrowIfNull(card);
+        ValidatePlayer(destinationPlayer);
+        if (!Enum.IsDefined(destination)) throw new ArgumentOutOfRangeException(nameof(destination));
+        if (!Enum.IsDefined(deckPosition)) throw new ArgumentOutOfRangeException(nameof(deckPosition));
+        if (!_cardsByInstance.TryGetValue(card.InstanceId, out var registered) ||
+            !ReferenceEquals(registered, card))
+            throw new InvalidOperationException("Card instance does not belong to this game.");
+
+        var sourcePlayer = StringComparer.Ordinal.Equals(card.OwnerId, First.Id) ? First :
+            StringComparer.Ordinal.Equals(card.OwnerId, Second.Id) ? Second :
+            throw new InvalidOperationException("Card has no valid owner in this game.");
+
+        if (card.Zone == destination && ReferenceEquals(sourcePlayer, destinationPlayer))
+        {
+            if (destination == CardZone.Deck)
+            {
+                sourcePlayer.RemoveFromCurrentZone(card);
+                sourcePlayer.AddToZone(card, destination, deckPosition);
+            }
+            return;
+        }
+
+        if (card.Zone == CardZone.Field)
+        {
+            DeactivateEffectsFrom(card);
+            card.RemovePersistentModifiers();
+            card.RemoveRoundModifiers();
+        }
+
+        sourcePlayer.RemoveFromCurrentZone(card);
+        card.TransferOwnership(destinationPlayer, _id);
+        card.MoveTo(destination);
+        destinationPlayer.AddToZone(card, destination, deckPosition);
+        RefreshPersistentEffects();
+    }
+
+    public void ShuffleDeck(Player player, Random random)
+    {
+        EnsureNotFinished();
+        ValidatePlayer(player);
+        player.ShuffleDeck(random);
     }
 
     public void EndTurn()
