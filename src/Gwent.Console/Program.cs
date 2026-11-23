@@ -39,7 +39,7 @@ while (game.Draw(human) is { } card)
 }
 
 var score = Game.Score(human);
-Console.WriteLine($"`n{human.Id}: {score}");
+Console.WriteLine($"\n{human.Id}: {score}");
 Console.WriteLine($"{opponent.Id}: {Game.Score(opponent)}");
 Console.WriteLine(game.Winner is null ? "Result: draw" : $"Winner: {game.Winner.Id}");
 return 0;

@@ -11,8 +11,6 @@ public enum Row
 
 public sealed class Card
 {
-    private Guid? _gameId;
-
     public Card(string definitionId, string name, int power, Row row, string? effectId = null)
     {
         if (string.IsNullOrWhiteSpace(definitionId))
@@ -30,7 +28,7 @@ public sealed class Card
         EffectId = effectId;
     }
 
-    // InstanceId identifies this physical copy; DefinitionId identifies its reusable template.
+    // InstanceId identifies this physical copy; DefinitionId identifies its shared template.
     public Guid InstanceId { get; }
     public string DefinitionId { get; }
     public string Name { get; }
@@ -38,13 +36,6 @@ public sealed class Card
     public int Power { get; private set; }
     public Row Row { get; }
     public string? EffectId { get; }
-
-    internal void AssignToGame(Guid gameId)
-    {
-        if (_gameId is not null && _gameId != gameId)
-            throw new InvalidOperationException("A card instance cannot belong to more than one game.");
-        _gameId = gameId;
-    }
 
     public void IncreasePower(int amount)
     {
@@ -55,75 +46,30 @@ public sealed class Card
 
 public sealed class Player
 {
-    private readonly List<Card> _deck = [];
-    private readonly List<Card> _hand = [];
     private readonly List<Card> _field = [];
-    private readonly List<Card> _graveyard = [];
-    private readonly ReadOnlyCollection<Card> _deckView;
-    private readonly ReadOnlyCollection<Card> _handView;
     private readonly ReadOnlyCollection<Card> _fieldView;
-    private readonly ReadOnlyCollection<Card> _graveyardView;
 
     public Player(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Player id is required.", nameof(id));
         Id = id;
-        _deckView = _deck.AsReadOnly();
-        _handView = _hand.AsReadOnly();
         _fieldView = _field.AsReadOnly();
-        _graveyardView = _graveyard.AsReadOnly();
     }
 
     public string Id { get; }
-    public IReadOnlyList<Card> Deck => _deckView;
-    public IReadOnlyList<Card> Hand => _handView;
     public IReadOnlyList<Card> Field => _fieldView;
-    public IReadOnlyList<Card> Graveyard => _graveyardView;
 
-    internal bool Contains(Card card) =>
-        ContainsInstance(_deck, card) || ContainsInstance(_hand, card) ||
-        ContainsInstance(_field, card) || ContainsInstance(_graveyard, card);
-
-    internal Card? DrawTopCard()
+    internal void Add(Card card)
     {
-        if (_deck.Count == 0) return null;
-        var index = _deck.Count - 1;
-        var card = _deck[index];
-        _deck.RemoveAt(index);
-        _hand.Add(card);
-        return card;
-    }
-
-    internal void AddToDeck(Card card) => _deck.Add(card);
-
-    internal void PlayFromHand(Card card)
-    {
-        Remove(_hand, card, "hand");
+        ArgumentNullException.ThrowIfNull(card);
+        if (_field.Any(existing => existing.InstanceId == card.InstanceId))
+            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is already on this player's field.");
         _field.Add(card);
-    }
-
-    internal void MoveToGraveyard(Card card)
-    {
-        Remove(_field, card, "field");
-        _graveyard.Add(card);
-    }
-
-    private static bool ContainsInstance(IEnumerable<Card> cards, Card card) =>
-        cards.Any(existing => existing.InstanceId == card.InstanceId);
-
-    private static void Remove(List<Card> cards, Card card, string zoneName)
-    {
-        var index = cards.FindIndex(existing => existing.InstanceId == card.InstanceId);
-        if (index < 0)
-            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is not in the player's {zoneName}.");
-        cards.RemoveAt(index);
     }
 }
 
 public sealed class Game
 {
-    private readonly Guid _id = Guid.NewGuid();
-
     public Game(Player first, Player second)
     {
         First = first ?? throw new ArgumentNullException(nameof(first));
@@ -144,42 +90,19 @@ public sealed class Game
         }
     }
 
-    public void AddToDeck(Player player, Card card)
-    {
-        ValidatePlayer(player);
-        ArgumentNullException.ThrowIfNull(card);
-        if (ContainsCard(card))
-            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is already in this game.");
-
-        // Claim the instance only after all validations and immediately before insertion.
-        card.AssignToGame(_id);
-        player.AddToDeck(card);
-    }
-
-    public Card? Draw(Player player)
-    {
-        ValidatePlayer(player);
-        return player.DrawTopCard();
-    }
-
     public void Play(Player player, Card card)
     {
-        ValidatePlayer(player);
+        ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(card);
-        if (!player.Hand.Any(existing => existing.InstanceId == card.InstanceId))
-            throw new InvalidOperationException("Only a card in the player's hand can be played.");
+        if (!ReferenceEquals(player, First) && !ReferenceEquals(player, Second))
+            throw new InvalidOperationException("Player does not belong to this game.");
 
-        player.PlayFromHand(card);
-    }
+        // A physical copy may occupy only one place in a match.
+        if (First.Field.Any(existing => existing.InstanceId == card.InstanceId) ||
+            Second.Field.Any(existing => existing.InstanceId == card.InstanceId))
+            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is already in this game.");
 
-    public void Destroy(Player player, Card card)
-    {
-        ValidatePlayer(player);
-        ArgumentNullException.ThrowIfNull(card);
-        if (!player.Field.Any(existing => existing.InstanceId == card.InstanceId))
-            throw new InvalidOperationException("Only a card on the player's field can be moved to the graveyard.");
-
-        player.MoveToGraveyard(card);
+        player.Add(card);
     }
 
     public static int Score(Player player)
@@ -187,14 +110,4 @@ public sealed class Game
         ArgumentNullException.ThrowIfNull(player);
         return player.Field.Sum(card => card.Power);
     }
-
-    private void ValidatePlayer(Player player)
-    {
-        ArgumentNullException.ThrowIfNull(player);
-        if (!ReferenceEquals(player, First) && !ReferenceEquals(player, Second))
-            throw new InvalidOperationException("Player does not belong to this game.");
-    }
-
-    private bool ContainsCard(Card card) =>
-        First.Contains(card) || Second.Contains(card);
 }
