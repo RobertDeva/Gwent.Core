@@ -1,194 +1,77 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using Gwent.Engine;
-
 namespace Gwent.Compiler;
-
 public sealed record Diagnostic(int Line, string Message)
 {
     public override string ToString() => $"Line {Line}: {Message}";
 }
-
-// Compiled effect data is intentionally separate from engine execution.
-public sealed record CompiledEffect(
-    string Id,
-    int PowerIncrease,
-    EffectDuration Duration = EffectDuration.Instant,
-    EffectOperation Operation = EffectOperation.Add,
-    EffectTargetScope TargetScope = EffectTargetScope.SourceCard)
+public sealed record CompiledEffect(string Id, int PowerIncrease, EffectDuration Duration = EffectDuration.Instant, EffectOperation Operation = EffectOperation.Add, EffectTargetScope TargetScope = EffectTargetScope.SourceCard)
 {
     public CardEffect ToEngineEffect() => new(Id, PowerIncrease, Duration, Operation, TargetScope);
 }
-
 public sealed class CardDefinition
 {
-    public CardDefinition(string id, string name, int power, Row row, string? effectId)
-    {
-        Id = id;
-        Name = name;
-        Power = power;
-        Row = row;
-        EffectId = effectId;
-    }
-
+    public CardDefinition(string id, string name, int power, Row row, string? effectId) { Id=id; Name=name; Power=power; Row=row; EffectId=effectId; }
     public string Id { get; }
     public string Name { get; }
     public int Power { get; }
     public Row Row { get; }
     public string? EffectId { get; }
-
     public Card CreateCard() => new(Id, Name, Power, Row, EffectId);
 }
-
 public sealed class CompilationResult
 {
-    internal CompilationResult(
-        IReadOnlyDictionary<string, CardDefinition> cards,
-        IReadOnlyDictionary<string, CompiledEffect> effects,
-        IReadOnlyList<Diagnostic> diagnostics)
+    internal CompilationResult(IReadOnlyDictionary<string,CardDefinition> cards, IReadOnlyDictionary<string,CompiledEffect> effects, IReadOnlyList<Diagnostic> diagnostics)
     {
-        Cards = new ReadOnlyDictionary<string, CardDefinition>(
-            new Dictionary<string, CardDefinition>(cards, StringComparer.Ordinal));
-        Effects = new ReadOnlyDictionary<string, CompiledEffect>(
-            new Dictionary<string, CompiledEffect>(effects, StringComparer.Ordinal));
-        Diagnostics = diagnostics;
+        Cards=new ReadOnlyDictionary<string,CardDefinition>(new Dictionary<string,CardDefinition>(cards,StringComparer.Ordinal));
+        Effects=new ReadOnlyDictionary<string,CompiledEffect>(new Dictionary<string,CompiledEffect>(effects,StringComparer.Ordinal));
+        Diagnostics=Array.AsReadOnly(diagnostics.ToArray());
     }
-
-    public IReadOnlyDictionary<string, CardDefinition> Cards { get; }
-    public IReadOnlyDictionary<string, CompiledEffect> Effects { get; }
+    public IReadOnlyDictionary<string,CardDefinition> Cards { get; }
+    public IReadOnlyDictionary<string,CompiledEffect> Effects { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
-    public bool Success => Diagnostics.Count == 0;
-
+    public bool Success => Diagnostics.Count==0;
     public bool ApplyCardEffect(Game game, Player player, Card card)
     {
-        ArgumentNullException.ThrowIfNull(game);
-        ArgumentNullException.ThrowIfNull(player);
-        ArgumentNullException.ThrowIfNull(card);
-
-        if (!Cards.TryGetValue(card.DefinitionId, out var definition))
-            throw new ArgumentException($"Card definition '{card.DefinitionId}' does not belong to this compilation.", nameof(card));
-
-        if (!StringComparer.Ordinal.Equals(card.Name, definition.Name) ||
-            card.BasePower != definition.Power ||
-            card.Row != definition.Row ||
-            !StringComparer.Ordinal.Equals(card.EffectId, definition.EffectId))
-            throw new ArgumentException("Card instance does not match its compiled definition.", nameof(card));
-
+        ArgumentNullException.ThrowIfNull(game); ArgumentNullException.ThrowIfNull(player); ArgumentNullException.ThrowIfNull(card);
+        if (!Cards.TryGetValue(card.DefinitionId,out var definition)) throw new ArgumentException($"Card definition '{card.DefinitionId}' does not belong to this compilation.",nameof(card));
+        if (!StringComparer.Ordinal.Equals(card.Name,definition.Name) || card.BasePower!=definition.Power || card.Row!=definition.Row || !StringComparer.Ordinal.Equals(card.EffectId,definition.EffectId))
+            throw new ArgumentException("Card instance does not match its compiled definition.",nameof(card));
         if (definition.EffectId is null) return false;
-
-        if (!Effects.TryGetValue(definition.EffectId, out var effect))
-            throw new InvalidOperationException($"Compiled effect '{definition.EffectId}' is missing from the catalog.");
-
-        game.ApplyEffect(player, card, effect.ToEngineEffect());
-        return true;
+        if (!Effects.TryGetValue(definition.EffectId,out var effect)) throw new InvalidOperationException($"Compiled effect '{definition.EffectId}' is missing from the catalog.");
+        game.ApplyEffect(player,card,effect.ToEngineEffect()); return true;
     }
 }
-
 public sealed class DslCompiler
 {
-    private static readonly Regex CardPattern = new(
-        @"^card\s+(?<id>[A-Za-z_][A-Za-z0-9_]*)\s+""(?<name>[^""]+)""\s+power\s+(?<power>\d+)\s+row\s+(?<row>melee|ranged|siege)(?:\s+effect\s+(?<effect>[A-Za-z_][A-Za-z0-9_]*))?$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-
-    private static readonly Regex EffectPattern = new(
-        @"^effect\s+(?<id>[A-Za-z_][A-Za-z0-9_]*)\s+boost\s+(?<amount>\d+)(?:\s+duration\s+(?<duration>instant|while-source-on-field))?(?:\s+operation\s+(?<operation>add|set|multiply))?(?:\s+target\s+(?<target>source|own-row|both-players-in-row))?$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-
     public CompilationResult Compile(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        var cards = new Dictionary<string, CardDefinition>(StringComparer.Ordinal);
-        var effects = new Dictionary<string, CompiledEffect>(StringComparer.Ordinal);
-        var diagnostics = new List<Diagnostic>();
-        var cardLines = new List<(int Line, Match Match)>();
-
-        var lines = source.Split('\n');
-        for (var index = 0; index < lines.Length; index++)
+        var lexer=new Lexer(source); var tokens=lexer.Tokenize(); var syntax=new Parser(tokens).Parse();
+        var diagnostics=lexer.Diagnostics.Concat(syntax.Diagnostics).ToList();
+        var effects=new Dictionary<string,CompiledEffect>(StringComparer.Ordinal);
+        var cards=new Dictionary<string,CardDefinition>(StringComparer.Ordinal);
+        foreach(var declaration in syntax.Declarations.OfType<EffectDeclarationSyntax>())
         {
-            var line = lines[index].Trim();
-            if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal)) continue;
-
-            var effectMatch = EffectPattern.Match(line);
-            if (effectMatch.Success)
-            {
-                var id = effectMatch.Groups["id"].Value;
-                if (!TryParseNonNegativeInteger(effectMatch.Groups["amount"].Value, out var amount))
-                {
-                    diagnostics.Add(new Diagnostic(index + 1, $"Effect '{id}' has a value outside the supported integer range."));
-                    continue;
-                }
-
-                var duration = effectMatch.Groups["duration"].Value.ToLowerInvariant() switch
-                {
-                    "while-source-on-field" => EffectDuration.WhileSourceOnField,
-                    _ => EffectDuration.Instant
-                };
-                var operation = effectMatch.Groups["operation"].Value.ToLowerInvariant() switch
-                {
-                    "set" => EffectOperation.Set,
-                    "multiply" => EffectOperation.Multiply,
-                    _ => EffectOperation.Add
-                };
-                var targetScope = effectMatch.Groups["target"].Value.ToLowerInvariant() switch
-                {
-                    "own-row" => EffectTargetScope.OwnRow,
-                    "both-players-in-row" => EffectTargetScope.BothPlayersInRow,
-                    _ => EffectTargetScope.SourceCard
-                };
-
-                if (!effects.TryAdd(id, new CompiledEffect(id, amount, duration, operation, targetScope)))
-                    diagnostics.Add(new Diagnostic(index + 1, $"Duplicate effect id '{id}'."));
-                continue;
-            }
-
-            var cardMatch = CardPattern.Match(line);
-            if (cardMatch.Success)
-            {
-                cardLines.Add((index + 1, cardMatch));
-                continue;
-            }
-
-            diagnostics.Add(new Diagnostic(index + 1, "Unrecognized declaration."));
+            if(!TryParseNonNegativeInteger(declaration.Amount,out var amount)) { diagnostics.Add(new Diagnostic(declaration.Line,$"Effect '{declaration.Id}' has a value outside the supported integer range.")); continue; }
+            var duration=declaration.Duration?.ToLowerInvariant() switch { "while-source-on-field"=>EffectDuration.WhileSourceOnField, null or "instant"=>EffectDuration.Instant, _=>(EffectDuration?)null };
+            var operation=declaration.Operation?.ToLowerInvariant() switch { "set"=>EffectOperation.Set, "multiply"=>EffectOperation.Multiply, null or "add"=>EffectOperation.Add, _=>(EffectOperation?)null };
+            var target=declaration.Target?.ToLowerInvariant() switch { "own-row"=>EffectTargetScope.OwnRow, "both-players-in-row"=>EffectTargetScope.BothPlayersInRow, null or "source"=>EffectTargetScope.SourceCard, _=>(EffectTargetScope?)null };
+            if(duration is null || operation is null || target is null) { diagnostics.Add(new Diagnostic(declaration.Line,$"Effect '{declaration.Id}' contains unsupported metadata.")); continue; }
+            if(!effects.TryAdd(declaration.Id,new CompiledEffect(declaration.Id,amount,duration.Value,operation.Value,target.Value)))
+                diagnostics.Add(new Diagnostic(declaration.Line,$"Duplicate effect id '{declaration.Id}'."));
         }
-
-        foreach (var (line, match) in cardLines)
+        foreach(var declaration in syntax.Declarations.OfType<CardDeclarationSyntax>())
         {
-            var id = match.Groups["id"].Value;
-            var effectId = match.Groups["effect"].Success ? match.Groups["effect"].Value : null;
-            if (cards.ContainsKey(id))
-            {
-                diagnostics.Add(new Diagnostic(line, $"Duplicate card id '{id}'."));
-                continue;
-            }
-
-            if (!TryParseNonNegativeInteger(match.Groups["power"].Value, out var power))
-            {
-                diagnostics.Add(new Diagnostic(line, $"Card '{id}' has a power outside the supported integer range."));
-                continue;
-            }
-
-            if (effectId is not null && !effects.ContainsKey(effectId))
-            {
-                diagnostics.Add(new Diagnostic(line, $"Card '{id}' references unknown effect '{effectId}'."));
-                continue;
-            }
-
-            var row = Enum.Parse<Row>(match.Groups["row"].Value, ignoreCase: true);
-            cards.Add(id, new CardDefinition(id, match.Groups["name"].Value, power, row, effectId));
+            if(cards.ContainsKey(declaration.Id)) { diagnostics.Add(new Diagnostic(declaration.Line,$"Duplicate card id '{declaration.Id}'.")); continue; }
+            if(!TryParseNonNegativeInteger(declaration.Power,out var power)) { diagnostics.Add(new Diagnostic(declaration.Line,$"Card '{declaration.Id}' has a power outside the supported integer range.")); continue; }
+            if(!Enum.TryParse<Row>(declaration.Row,true,out var row) || !Enum.IsDefined(row)) { diagnostics.Add(new Diagnostic(declaration.Line,$"Card '{declaration.Id}' has an invalid row.")); continue; }
+            if(declaration.EffectId is not null && !effects.ContainsKey(declaration.EffectId)) { diagnostics.Add(new Diagnostic(declaration.Line,$"Card '{declaration.Id}' references unknown effect '{declaration.EffectId}'.")); continue; }
+            cards.Add(declaration.Id,new CardDefinition(declaration.Id,declaration.Name,power,row,declaration.EffectId));
         }
-
-        if (diagnostics.Count > 0)
-        {
-            return new CompilationResult(
-                new Dictionary<string, CardDefinition>(),
-                new Dictionary<string, CompiledEffect>(),
-                diagnostics.AsReadOnly());
-        }
-
-        return new CompilationResult(cards, effects, diagnostics.AsReadOnly());
+        if(diagnostics.Count>0) return new CompilationResult(new Dictionary<string,CardDefinition>(),new Dictionary<string,CompiledEffect>(),diagnostics.AsReadOnly());
+        return new CompilationResult(cards,effects,diagnostics.AsReadOnly());
     }
-
-    private static bool TryParseNonNegativeInteger(string value, out int result) =>
-        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out result);
+    private static bool TryParseNonNegativeInteger(string value,out int result)=>int.TryParse(value,NumberStyles.None,CultureInfo.InvariantCulture,out result);
 }

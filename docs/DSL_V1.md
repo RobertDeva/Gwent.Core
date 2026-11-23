@@ -1,6 +1,6 @@
 # Gwent.Core DSL — versión inicial
 
-La primera versión del lenguaje es deliberadamente pequeña y explícita. Su objetivo es validar el flujo completo fuente → compilación → catálogo → partida, antes de ampliar la gramática heredada.
+La gramática inicial valida el flujo fuente → análisis léxico → análisis sintáctico → análisis semántico → catálogo compilado → motor.
 
 ## Gramática
 
@@ -12,22 +12,31 @@ card <identifier> "<display name>" power <non-negative-integer> row <melee|range
 ```
 
 - Las líneas vacías y los comentarios que comienzan con `#` se ignoran.
-- Los identificadores comienzan con letra o guion bajo.
-- Las cartas pueden referenciar efectos declarados en el mismo archivo.
+- Los identificadores comienzan con letra o guion bajo y continúan con letras, dígitos o guion bajo.
+- Los nombres entre comillas admiten escapes para comillas, barra inversa, salto de línea y tabulación.
+- Las cartas pueden referenciar efectos declarados antes o después.
 - Los números deben caber en un entero con signo de 32 bits; los valores fuera del rango producen diagnósticos.
 - La compilación es atómica: ante cualquier diagnóstico no se publica ningún catálogo parcial.
-- Un efecto `boost N` conserva compatibilidad con el comportamiento inicial: es instantáneo, suma N y afecta a la carta fuente.
-- `duration while-source-on-field` mantiene el modificador activo mientras la carta fuente permanezca en el campo; `instant` es el valor predeterminado.
-- `operation` define si N se suma (`add`, predeterminado), reemplaza la potencia (`set`) o la multiplica (`multiply`).
-- `target source` afecta solo a la carta fuente; `own-row` afecta a las demás cartas de su fila y propietario; `both-players-in-row` afecta a las demás cartas de esa fila en ambos campos.
-- Los efectos persistentes se recalculan al cambiar el campo y se retiran cuando sale su fuente o termina la ronda. El sistema de filtrado por tipo/rango de carta todavía no está implementado.
+- Un efecto `boost N` es instantáneo, suma N y afecta a la carta fuente de forma predeterminada.
+- `duration while-source-on-field` mantiene el modificador activo mientras la carta fuente permanezca en el campo.
+- `operation` define si N se suma (`add`), reemplaza la potencia (`set`) o la multiplica (`multiply`).
+- `target source` afecta solo a la fuente; `own-row` afecta a las demás cartas de su fila y propietario; `both-players-in-row` afecta a las demás cartas de esa fila en ambos campos.
+
+## Arquitectura del compilador
+
+1. **Lexer:** produce tokens con línea y columna, reconoce comentarios, identificadores, enteros, cadenas y finales de línea.
+2. **Parser:** convierte tokens en declaraciones tipadas del AST y recupera errores al final de cada línea.
+3. **AST:** conserva declaraciones de efectos y cartas sin ejecutar reglas del motor.
+4. **Análisis semántico:** valida enteros, identificadores duplicados, filas y referencias a efectos; permite referencias adelantadas.
+5. **Catálogo compilado:** publica definiciones y efectos solo si no hay diagnósticos.
+6. **Integración runtime:** `CompilationResult.ApplyCardEffect` valida la definición y delega la mutación a `Game`.
+
+La estructura queda preparada para incorporar expresiones, selectores, predicados, parámetros y acciones sin acoplarlos al lexer ni a la API del motor. Esas construcciones no forman todavía parte de la gramática implementada.
 
 ## Integración con el motor
 
-El resultado de compilación es el catálogo autorizado para crear instancias y aplicar sus efectos:
-
 - `CardDefinition.CreateCard()` crea una instancia física nueva; las copias comparten definición, no identidad.
-- `CompilationResult.ApplyCardEffect(game, player, card)` comprueba que la instancia coincide con una definición del catálogo y aplica el efecto asociado a través de la API del motor.
+- `CompilationResult.ApplyCardEffect(game, player, card)` aplica el efecto asociado.
 - El método devuelve `false` cuando la carta no declara efecto y `true` cuando lo aplica. Las restricciones de turno, zona y duplicación siguen siendo responsabilidad del motor.
 
 ## Ejecución
@@ -35,5 +44,3 @@ El resultado de compilación es el catálogo autorizado para crear instancias y 
 ```sh
 dotnet run --project src/Gwent.Console -- examples/starter.gwent
 ```
-
-Esta gramática es una primera rebanada vertical, no una afirmación de compatibilidad con toda la sintaxis del compilador original. La expansión de selectores, predicados, scopes y operaciones de listas requiere etapas separadas de análisis semántico y ejecución.
