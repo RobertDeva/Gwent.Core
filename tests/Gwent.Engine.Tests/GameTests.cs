@@ -249,7 +249,7 @@ public sealed class GameTests
 
         game.Destroy(first, source);
         Assert.Equal(5, unit.Power);
-        Assert.Empty(first.Graveyard);
+        Assert.Single(first.Graveyard);
         Assert.Equal(CardZone.Graveyard, source.Zone);
     }
 
@@ -278,8 +278,8 @@ public sealed class GameTests
         var game = new Game(first, second);
         var source = new Card("weather", "Weather", 0, Row.Siege, "storm");
         var unit = new Card("unit", "Unit", 5, Row.Siege);
-        game.AddToDeck(first, source);
         game.AddToDeck(first, unit);
+        game.AddToDeck(first, source);
         game.Draw(first);
         game.Play(first, source);
         game.ApplyEffect(first, source, new CardEffect(
