@@ -56,6 +56,9 @@ public sealed record RuntimeSelector(
 
         var candidates = RuntimeSourceResolver.Resolve(context, Source, parentTargets);
         var matches = new List<Card>(candidates.Count);
+        var lambda = Predicate is LambdaExpression
+            ? Predicate.Evaluate(context).AsLambda()
+            : null;
 
         foreach (var card in candidates)
         {
@@ -63,6 +66,13 @@ public sealed record RuntimeSelector(
             if (Predicate is null)
             {
                 matches.Add(card);
+                continue;
+            }
+
+            if (lambda is not null)
+            {
+                if (lambda.Invoke(context, RuntimeValue.From(card)).AsBoolean())
+                    matches.Add(card);
                 continue;
             }
 
