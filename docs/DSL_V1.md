@@ -7,7 +7,7 @@ La gramática inicial valida el flujo fuente → análisis léxico → análisis
 Una declaración por línea:
 
 ```text
-effect <identifier> boost <non-negative-integer> [duration <instant|while-source-on-field or until-round-end>] [operation <add|set|multiply>] [target <source|own-row|both-players-in-row>]
+effect <identifier> boost <non-negative-integer> [duration <instant|while-source-on-field|until-round-end>] [operation <add|set|multiply>] [target <source|own-row|both-players-in-row>]
 card <identifier> "<display name>" power <non-negative-integer> row <melee|ranged|siege> [effect <effect-identifier>]
 ```
 
@@ -19,6 +19,7 @@ card <identifier> "<display name>" power <non-negative-integer> row <melee|range
 - La compilación es atómica: ante cualquier diagnóstico no se publica ningún catálogo parcial.
 - Un efecto `boost N` es instantáneo, suma N y afecta a la carta fuente de forma predeterminada.
 - `duration while-source-on-field` mantiene el modificador activo mientras la carta fuente permanezca en el campo.
+- `duration until-round-end` mantiene el modificador hasta la limpieza de la ronda.
 - `operation` define si N se suma (`add`), reemplaza la potencia (`set`) o la multiplica (`multiply`).
 - `target source` afecta solo a la fuente; `own-row` afecta a las demás cartas de su fila y propietario; `both-players-in-row` afecta a las demás cartas de esa fila en ambos campos.
 
