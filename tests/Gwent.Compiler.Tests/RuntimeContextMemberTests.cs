@@ -18,7 +18,6 @@ public sealed class RuntimeContextMemberTests
 
         var context = new RuntimeExecutionContext(
             first, new Card("source", "Source", 1, Row.Melee), game);
-        context.Scope.Define("context", RuntimeValue.From(context));
         var parser = new ExpressionParser("context.TriggerPlayer.Hand[0].Power");
         var expression = parser.Parse();
 

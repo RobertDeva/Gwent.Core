@@ -173,6 +173,7 @@ public sealed class RuntimeExecutionContext
 
         InstructionLimit = instructionLimit;
         Scope = new RuntimeScope();
+        Scope.Define("context", RuntimeValue.From(this));
     }
 
     public Player TriggerPlayer { get; }
