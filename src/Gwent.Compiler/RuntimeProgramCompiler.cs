@@ -24,9 +24,10 @@ public sealed class RuntimeProgramCompiler
         if (effectResult.Catalog is null || diagnostics.Count > 0)
             return new RuntimeProgramCompilationResult(null, diagnostics.AsReadOnly());
 
+        var catalog = effectResult.Catalog;
         var analyzer = new RuntimeTypeAnalyzer();
-        diagnostics.AddRange(analyzer.Analyze(effectResult.Catalog));
-        diagnostics.AddRange(analyzer.AnalyzeActivations(effectResult.Catalog, activationResult.Activations));
+        diagnostics.AddRange(analyzer.Analyze(catalog));
+        diagnostics.AddRange(analyzer.AnalyzeActivations(catalog, activationResult.Activations));
 
         if (diagnostics.Count > 0)
             return new RuntimeProgramCompilationResult(null, diagnostics.AsReadOnly());

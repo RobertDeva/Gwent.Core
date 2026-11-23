@@ -121,7 +121,7 @@ public sealed class RuntimeTypeAnalyzer
             return;
         }
 
-        var predicateVariables = new Dictionary<string, RuntimeType>(variables, StringComparer.Ordinal)
+        var predicateVariables = CopyVariables(variables)
         {
             [lambda.ParameterName] = RuntimeType.Card
         };
@@ -354,6 +354,10 @@ public sealed class RuntimeTypeAnalyzer
         return RuntimeType.Unknown;
     }
 
+    private static Dictionary<string, RuntimeType> CopyVariables(
+        IReadOnlyDictionary<string, RuntimeType> variables) =>
+        variables.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+
     private void Add(string message) => _diagnostics.Add(new Diagnostic(1, message));
 
     private static RuntimeType ToRuntimeType(RuntimeParameterType type) => type switch
@@ -367,12 +371,7 @@ public sealed class RuntimeTypeAnalyzer
     private static IEnumerable<RuntimeEffectDefinition> GetEffects(RuntimeEffectCatalog catalog)
     {
         // Catalog deliberately exposes only lookup; validation is performed by the compiler at registration.
-        return RuntimeEffectCatalogInspector.GetAll(catalog);
+        return catalog.Effects;
     }
 }
 
-internal static class RuntimeEffectCatalogInspector
-{
-    public static IReadOnlyCollection<RuntimeEffectDefinition> GetAll(RuntimeEffectCatalog catalog) =>
-        catalog.GetAllEffects();
-}
