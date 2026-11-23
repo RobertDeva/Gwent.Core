@@ -9,7 +9,14 @@ public sealed record RuntimeEffectCompilationResult(
 
 public sealed class RuntimeEffectCompiler
 {
-    public RuntimeEffectCompilationResult Compile(string source)
+    public RuntimeEffectCompilationResult Compile(string source) =>
+        CompileCore(source, exposeInvalidCatalog: false);
+
+    internal RuntimeEffectCompilationResult CompileForProgram(string source) =>
+        CompileCore(source, exposeInvalidCatalog: true);
+
+    private static RuntimeEffectCompilationResult CompileCore(
+        string source, bool exposeInvalidCatalog)
     {
         ArgumentNullException.ThrowIfNull(source);
         var lexer = new Lexer(source);
@@ -19,8 +26,11 @@ public sealed class RuntimeEffectCompiler
         if (parsed.Catalog is null) return parsed;
 
         var semanticDiagnostics = new RuntimeTypeAnalyzer().Analyze(parsed.Catalog);
-        return new RuntimeEffectCompilationResult(
-            parsed.Catalog, parsed.Diagnostics.Concat(semanticDiagnostics).ToArray());
+        var diagnostics = parsed.Diagnostics.Concat(semanticDiagnostics).ToArray();
+        var catalog = diagnostics.Length == 0 || exposeInvalidCatalog
+            ? parsed.Catalog
+            : null;
+        return new RuntimeEffectCompilationResult(catalog, diagnostics);
     }
 }
 

@@ -18,7 +18,7 @@ public sealed class RuntimeProgramCompiler
         ArgumentNullException.ThrowIfNull(effectSource);
         ArgumentNullException.ThrowIfNull(activationSource);
 
-        var effectResult = new RuntimeEffectCompiler().Compile(effectSource);
+        var effectResult = new RuntimeEffectCompiler().CompileForProgram(effectSource);
         var activationResult = new RuntimeActivationParser(activationSource).Parse();
         var diagnostics = effectResult.Diagnostics.Concat(activationResult.Diagnostics).ToList();
         if (effectResult.Catalog is null)

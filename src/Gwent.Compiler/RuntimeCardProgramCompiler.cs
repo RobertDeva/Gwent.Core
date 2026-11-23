@@ -55,7 +55,7 @@ public sealed class RuntimeCardProgramCompiler
         ArgumentNullException.ThrowIfNull(effectSource);
         ArgumentNullException.ThrowIfNull(cardSource);
 
-        var effectResult = new RuntimeEffectCompiler().Compile(effectSource);
+        var effectResult = new RuntimeEffectCompiler().CompileForProgram(effectSource);
         var cardResult = new RuntimeCardParser(cardSource).Parse();
         var diagnostics = effectResult.Diagnostics.Concat(cardResult.Diagnostics).ToList();
         if (effectResult.Catalog is null)
