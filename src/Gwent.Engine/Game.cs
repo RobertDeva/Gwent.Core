@@ -4,19 +4,36 @@ namespace Gwent.Engine;
 
 public enum Row { Melee, Ranged, Siege }
 public enum CardZone { Unassigned, Deck, Hand, Field, Graveyard }
+public enum EffectDuration { Instant, WhileSourceOnField }
+public enum EffectOperation { Add, Set, Multiply }
+public enum EffectTargetScope { SourceCard, OwnRow, BothPlayersInRow }
 
 public sealed record CardEffect
 {
-    public CardEffect(string id, int powerIncrease)
+    public CardEffect(
+        string id,
+        int powerIncrease,
+        EffectDuration duration = EffectDuration.Instant,
+        EffectOperation operation = EffectOperation.Add,
+        EffectTargetScope targetScope = EffectTargetScope.SourceCard)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Effect id is required.", nameof(id));
         if (powerIncrease < 0) throw new ArgumentOutOfRangeException(nameof(powerIncrease));
+        if (!Enum.IsDefined(duration)) throw new ArgumentOutOfRangeException(nameof(duration));
+        if (!Enum.IsDefined(operation)) throw new ArgumentOutOfRangeException(nameof(operation));
+        if (!Enum.IsDefined(targetScope)) throw new ArgumentOutOfRangeException(nameof(targetScope));
         Id = id;
         PowerIncrease = powerIncrease;
+        Duration = duration;
+        Operation = operation;
+        TargetScope = targetScope;
     }
 
     public string Id { get; }
     public int PowerIncrease { get; }
+    public EffectDuration Duration { get; }
+    public EffectOperation Operation { get; }
+    public EffectTargetScope TargetScope { get; }
 }
 
 public sealed class Card
@@ -24,6 +41,9 @@ public sealed class Card
     private Guid? _gameId;
     private string? _ownerId;
     private readonly HashSet<string> _appliedEffects = new(StringComparer.Ordinal);
+    private readonly List<PowerModifier> _modifiers = [];
+
+    private sealed record PowerModifier(Guid? SourceInstanceId, string EffectId, EffectOperation Operation, int Amount);
 
     public Card(string definitionId, string name, int power, Row row, string? effectId = null)
     {
@@ -35,7 +55,6 @@ public sealed class Card
         DefinitionId = definitionId;
         Name = name;
         BasePower = power;
-        Power = power;
         Row = row;
         EffectId = effectId;
     }
@@ -44,7 +63,24 @@ public sealed class Card
     public string DefinitionId { get; }
     public string Name { get; }
     public int BasePower { get; }
-    public int Power { get; private set; }
+    public int Power
+    {
+        get
+        {
+            var power = BasePower;
+            foreach (var modifier in _modifiers)
+            {
+                power = modifier.Operation switch
+                {
+                    EffectOperation.Add => checked(power + modifier.Amount),
+                    EffectOperation.Set => modifier.Amount,
+                    EffectOperation.Multiply => checked(power * modifier.Amount),
+                    _ => throw new InvalidOperationException("Unsupported power modifier operation.")
+                };
+            }
+            return power;
+        }
+    }
     public Row Row { get; }
     public string? EffectId { get; }
     public CardZone Zone { get; private set; }
@@ -65,17 +101,35 @@ public sealed class Card
         Zone = zone;
     }
 
-    internal void ApplyEffect(CardEffect effect)
+    internal bool TryApplyEffect(CardEffect effect)
     {
         ArgumentNullException.ThrowIfNull(effect);
         if (!StringComparer.Ordinal.Equals(EffectId, effect.Id))
             throw new InvalidOperationException($"Effect '{effect.Id}' is not assigned to card '{DefinitionId}'.");
-        if (_appliedEffects.Contains(effect.Id))
+        if (!_appliedEffects.Add(effect.Id))
             throw new InvalidOperationException($"Effect '{effect.Id}' has already been applied to this card instance.");
 
-        var updatedPower = checked(Power + effect.PowerIncrease);
-        _appliedEffects.Add(effect.Id);
-        Power = updatedPower;
+        if (effect.Duration == EffectDuration.Instant)
+            _modifiers.Add(new PowerModifier(null, effect.Id, effect.Operation, effect.PowerIncrease));
+        return true;
+    }
+
+    internal void SetPersistentModifier(Card source, CardEffect effect)
+    {
+        if (_modifiers.Any(modifier => modifier.SourceInstanceId == source.InstanceId &&
+                                       StringComparer.Ordinal.Equals(modifier.EffectId, effect.Id)))
+            return;
+        _modifiers.Add(new PowerModifier(source.InstanceId, effect.Id, effect.Operation, effect.PowerIncrease));
+    }
+
+    internal void RemovePersistentModifiers()
+    {
+        _modifiers.RemoveAll(modifier => modifier.SourceInstanceId is not null);
+    }
+
+    internal void RemovePersistentModifier(Guid sourceInstanceId)
+    {
+        _modifiers.RemoveAll(modifier => modifier.SourceInstanceId == sourceInstanceId);
     }
 }
 
@@ -192,8 +246,11 @@ public sealed class Player
 
 public sealed class Game
 {
+    private sealed record ActiveEffect(Card Source, CardEffect Effect);
+
     private readonly Guid _id = Guid.NewGuid();
     private readonly HashSet<Player> _passedPlayers = [];
+    private readonly List<ActiveEffect> _activeEffects = [];
     private Player _roundStarter;
     private bool _hasPlayedThisTurn;
 
@@ -249,6 +306,7 @@ public sealed class Game
         if (_hasPlayedThisTurn) throw new InvalidOperationException("A player can play only one card per turn.");
         player.PlayFromHand(card);
         _hasPlayedThisTurn = true;
+        RefreshPersistentEffects();
     }
 
     public void Destroy(Player player, Card card)
@@ -258,7 +316,9 @@ public sealed class Game
         if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
             !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
             throw new InvalidOperationException("Only a card on the active player's field can be destroyed.");
+        DeactivateEffectsFrom(card);
         player.MoveToGraveyard(card);
+        RefreshPersistentEffects();
     }
 
     public void ApplyEffect(Player player, Card card, CardEffect effect)
@@ -268,8 +328,14 @@ public sealed class Game
         ArgumentNullException.ThrowIfNull(effect);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
             !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
-            throw new InvalidOperationException("Effects can only target a card on the active player's field.");
-        card.ApplyEffect(effect);
+            throw new InvalidOperationException("Effects can only be applied by a card on the active player's field.");
+
+        card.TryApplyEffect(effect);
+        if (effect.Duration == EffectDuration.WhileSourceOnField)
+        {
+            _activeEffects.Add(new ActiveEffect(card, effect));
+            RefreshPersistentEffects();
+        }
     }
 
     public void EndTurn()
@@ -306,6 +372,39 @@ public sealed class Game
         return player.Board.ScoreForRow(row);
     }
 
+    private void DeactivateEffectsFrom(Card source)
+    {
+        _activeEffects.RemoveAll(active => active.Source.InstanceId == source.InstanceId);
+        foreach (var card in First.Field.Concat(Second.Field))
+            card.RemovePersistentModifier(source.InstanceId);
+    }
+
+    private void RefreshPersistentEffects()
+    {
+        var field = First.Field.Concat(Second.Field).ToArray();
+        foreach (var card in field) card.RemovePersistentModifiers();
+
+        foreach (var active in _activeEffects)
+        {
+            if (active.Source.Zone != CardZone.Field) continue;
+            foreach (var target in SelectTargets(active.Source, active.Effect))
+                target.SetPersistentModifier(active.Source, active.Effect);
+        }
+    }
+
+    private IEnumerable<Card> SelectTargets(Card source, CardEffect effect)
+    {
+        if (effect.TargetScope == EffectTargetScope.SourceCard)
+            return [source];
+
+        var owner = ReferenceEquals(source.OwnerId, First.Id) ? First : Second;
+        var candidates = effect.TargetScope == EffectTargetScope.OwnRow
+            ? owner.Field
+            : First.Field.Concat(Second.Field).ToArray();
+
+        return candidates.Where(card => card.Row == source.Row);
+    }
+
     private void ResolveRound()
     {
         var firstScore = Score(First);
@@ -330,6 +429,7 @@ public sealed class Game
             _roundStarter = ReferenceEquals(_roundStarter, First) ? Second : First;
         }
 
+        _activeEffects.Clear();
         First.ClearFieldToGraveyard();
         Second.ClearFieldToGraveyard();
         _passedPlayers.Clear();

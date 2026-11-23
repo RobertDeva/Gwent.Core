@@ -191,4 +191,111 @@ public sealed class GameTests
         Assert.Equal(8, secondCopy.Power);
         Assert.Equal(5, firstCopy.Power);
     }
+
+    [Fact]
+    public void PersistentEffectAffectsBothPlayersAndFutureCardsInItsRow()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var weather = new Card("weather", "Weather", 0, Row.Melee, "frost");
+        var firstUnit = new Card("first-unit", "First unit", 5, Row.Melee);
+        var secondUnit = new Card("second-unit", "Second unit", 4, Row.Melee);
+        var laterUnit = new Card("later-unit", "Later unit", 6, Row.Melee);
+
+        game.AddToDeck(first, weather);
+        game.AddToDeck(first, firstUnit);
+        game.AddToDeck(second, secondUnit);
+        game.AddToDeck(second, laterUnit);
+        game.Draw(first);
+        game.Play(first, weather);
+        game.ApplyEffect(first, weather, new CardEffect(
+            "frost", 1, EffectDuration.WhileSourceOnField,
+            EffectOperation.Set, EffectTargetScope.BothPlayersInRow));
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, secondUnit);
+
+        Assert.Equal(1, first.Board.Score);
+        Assert.Equal(1, second.Board.Score);
+
+        game.EndTurn();
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, laterUnit);
+        Assert.Equal(1, laterUnit.Power);
+    }
+
+    [Fact]
+    public void PersistentEffectIsRemovedWhenItsSourceIsDestroyed()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var source = new Card("horn", "Horn", 0, Row.Ranged, "aura");
+        var unit = new Card("unit", "Unit", 5, Row.Ranged);
+        game.AddToDeck(first, source);
+        game.AddToDeck(first, unit);
+        game.Draw(first);
+        game.Play(first, source);
+        game.ApplyEffect(first, source, new CardEffect(
+            "aura", 2, EffectDuration.WhileSourceOnField,
+            EffectOperation.Multiply, EffectTargetScope.OwnRow));
+        game.EndTurn();
+        game.EndTurn();
+        game.Draw(first);
+        game.Play(first, unit);
+        Assert.Equal(10, unit.Power);
+
+        game.Destroy(first, source);
+        Assert.Equal(5, unit.Power);
+        Assert.Empty(first.Graveyard);
+        Assert.Equal(CardZone.Graveyard, source.Zone);
+    }
+
+    [Fact]
+    public void InstantEffectRemainsAfterItsSourceLeavesTheField()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var source = new Card("boost", "Boost", 0, Row.Melee, "instant");
+        game.AddToDeck(first, source);
+        game.Draw(first);
+        game.Play(first, source);
+        game.ApplyEffect(first, source, new CardEffect("instant", 3));
+        game.Destroy(first, source);
+
+        Assert.Equal(3, source.Power);
+        Assert.Equal(CardZone.Graveyard, source.Zone);
+    }
+
+    [Fact]
+    public void PersistentEffectsAreRemovedWhenRoundEnds()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var source = new Card("weather", "Weather", 0, Row.Siege, "storm");
+        var unit = new Card("unit", "Unit", 5, Row.Siege);
+        game.AddToDeck(first, source);
+        game.AddToDeck(first, unit);
+        game.Draw(first);
+        game.Play(first, source);
+        game.ApplyEffect(first, source, new CardEffect(
+            "storm", 1, EffectDuration.WhileSourceOnField,
+            EffectOperation.Set, EffectTargetScope.OwnRow));
+        game.EndTurn();
+        game.EndTurn();
+        game.Draw(first);
+        game.Play(first, unit);
+        Assert.Equal(1, unit.Power);
+        game.Pass(first);
+        game.Pass(second);
+
+        Assert.Equal(CardZone.Graveyard, source.Zone);
+        Assert.Equal(CardZone.Graveyard, unit.Zone);
+        Assert.Equal(5, unit.Power);
+    }
+
 }

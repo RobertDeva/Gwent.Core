@@ -16,6 +16,9 @@ Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity rem
 - A round winner earns one point; a tied round awards one point to each player. Field cards then move to graveyards.
 - The match ends when a player reaches two round points or the third round resolves.
 - Compiled effect data is converted into an Engine effect value and executed by Game with explicit player/card context.
+- Effects declare duration, operation, and target scope. Instant modifiers remain after their source leaves; field-bound effects are recalculated from active sources and removed when the source leaves the field or the round ends.
+- Persistent modifiers retain source-instance identity and are derived separately from base power, so removing one source does not erase other modifiers.
+- Row auras are applied to cards already present and cards entering the row later. The current model supports the source card, its owner's row, or both players' matching row.
 - An effect can only target its assigned card while it is on the active player's field, and each effect ID can be applied once per instance.
 - Compiler diagnostics are per compilation and invalid source publishes no partial catalogue.
 
