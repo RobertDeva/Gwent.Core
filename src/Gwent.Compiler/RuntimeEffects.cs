@@ -34,6 +34,8 @@ public sealed class RuntimeEffectDefinition
             throw new ArgumentException($"Parameter '{duplicate.Key}' is declared more than once.", nameof(parameters));
         if (Parameters.Any(parameter => string.IsNullOrWhiteSpace(parameter.Name)))
             throw new ArgumentException("Parameter names cannot be empty.", nameof(parameters));
+        if (Parameters.Any(parameter => parameter.Name is "targets" or "context"))
+            throw new ArgumentException("Parameter names 'targets' and 'context' are reserved.", nameof(parameters));
     }
 
     public string Id { get; }
@@ -95,6 +97,7 @@ public sealed class RuntimeEffectExecutor
             foreach (var parameter in values)
                 context.Scope.Define(parameter.Key, parameter.Value);
             context.Scope.Define("targets", RuntimeValue.FromCards(targets));
+            context.Scope.Define("context", RuntimeValue.From(context));
             _interpreter.Execute(definition.Action, context);
 
             if (invocation.PostAction is not null)

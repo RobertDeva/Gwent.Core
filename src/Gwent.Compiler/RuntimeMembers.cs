@@ -51,7 +51,7 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "FirstRoundsWon" => RuntimeValue.From(game.FirstRoundsWon),
         "SecondRoundsWon" => RuntimeValue.From(game.SecondRoundsWon),
         "IsFinished" => RuntimeValue.From(game.IsFinished),
-        "Winner" => game.Winner is null ? RuntimeValue.Null() : RuntimeValue.From(game.Winner),
+        "Winner" => game.Winner is null ? RuntimeValue.Null() : RuntimeValue.From(game.Winner!),
         _ => throw UnknownMember()
     };
 
@@ -59,7 +59,7 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
     {
         "TriggerPlayer" => RuntimeValue.From(context.TriggerPlayer),
         "SourceCard" => RuntimeValue.From(context.SourceCard),
-        "Game" => context.Game is null ? RuntimeValue.Null() : RuntimeValue.From(context.Game),
+        "Game" => context.Game is null ? RuntimeValue.Null() : RuntimeValue.From(context.Game!),
         "Hand" => RuntimeValue.FromCards(context.TriggerPlayer.Hand),
         "Deck" => RuntimeValue.FromCards(context.TriggerPlayer.Deck),
         "Field" => RuntimeValue.FromCards(context.TriggerPlayer.Field),
