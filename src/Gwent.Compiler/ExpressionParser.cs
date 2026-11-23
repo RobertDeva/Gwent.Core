@@ -47,6 +47,7 @@ public sealed class ExpressionParser
         while (TryGetBinaryOperator(Current.Kind, out var op, out var precedence, out var rightAssociative) &&
                precedence >= minimumPrecedence)
         {
+            var operatorToken = Current;
             Advance();
             var right = ParseExpression(rightAssociative ? precedence : precedence + 1);
             if (right is null)
@@ -54,18 +55,19 @@ public sealed class ExpressionParser
                 Error(Current, "Expected an expression after the operator.");
                 return null;
             }
-            left = new BinaryExpression(left, op, right);
+            left = At(new BinaryExpression(left, op, right), operatorToken);
         }
 
         if (minimumPrecedence == 0 && Match(TokenKind.Assign))
         {
+            var assignmentToken = Previous;
             var assignedValue = ParseExpression();
             if (assignedValue is null) return null;
             if (left is VariableExpression variable)
-                return new AssignmentExpression(variable.Name, assignedValue);
+                return At(new AssignmentExpression(variable.Name, assignedValue), assignmentToken);
             if (left is RuntimeMemberExpression member &&
                 member.MemberName.Equals("Power", StringComparison.OrdinalIgnoreCase))
-                return new CardPowerAssignmentExpression(member.Target, assignedValue);
+                return At(new CardPowerAssignmentExpression(member.Target, assignedValue), assignmentToken);
 
             Error(Previous, "Assignments are supported only for variables and card Power.");
             return null;
@@ -81,17 +83,17 @@ public sealed class ExpressionParser
             case TokenKind.Integer:
                 if (int.TryParse(token.Text, System.Globalization.NumberStyles.None,
                     System.Globalization.CultureInfo.InvariantCulture, out var number))
-                    return new LiteralExpression(RuntimeValue.From(number));
+                    return At(new LiteralExpression(RuntimeValue.From(number)), token);
                 Error(token, "Integer literal is outside the supported range.");
                 return null;
             case TokenKind.String:
-                return new LiteralExpression(RuntimeValue.From(token.Text));
+                return At(new LiteralExpression(RuntimeValue.From(token.Text)), token);
             case TokenKind.Identifier:
                 if (token.Text.Equals("true", StringComparison.OrdinalIgnoreCase))
-                    return new LiteralExpression(RuntimeValue.From(true));
+                    return At(new LiteralExpression(RuntimeValue.From(true)), token);
                 if (token.Text.Equals("false", StringComparison.OrdinalIgnoreCase))
-                    return new LiteralExpression(RuntimeValue.From(false));
-                return new VariableExpression(token.Text);
+                    return At(new LiteralExpression(RuntimeValue.From(false)), token);
+                return At(new VariableExpression(token.Text), token);
             case TokenKind.OpenParen:
                 if (Current.Kind == TokenKind.Identifier &&
                     Peek(1).Kind == TokenKind.CloseParen &&
@@ -101,7 +103,7 @@ public sealed class ExpressionParser
                     Advance();
                     Advance();
                     var body = ParseExpression();
-                    return body is null ? null : new LambdaExpression(parameter, body);
+                    return body is null ? null : At(new LambdaExpression(parameter, body), token);
                 }
                 var nested = ParseExpression();
                 if (!Match(TokenKind.CloseParen)) Error(Current, "Expected ')' to close expression.");
@@ -109,11 +111,11 @@ public sealed class ExpressionParser
             case TokenKind.Minus:
                 var operand = ParseExpression(8);
                 return operand is null ? null :
-                    new UnaryExpression(RuntimeUnaryOperator.Negate, operand);
+                    At(new UnaryExpression(RuntimeUnaryOperator.Negate, operand), token);
             case TokenKind.Bang:
                 var booleanOperand = ParseExpression(8);
                 return booleanOperand is null ? null :
-                    new UnaryExpression(RuntimeUnaryOperator.Not, booleanOperand);
+                    At(new UnaryExpression(RuntimeUnaryOperator.Not, booleanOperand), token);
             default:
                 Error(token, "Expected a literal, identifier, or parenthesized expression.");
                 return null;
@@ -126,17 +128,19 @@ public sealed class ExpressionParser
         {
             if (Match(TokenKind.OpenParen))
             {
+                var callToken = Previous;
                 if (expression is not VariableExpression function)
                 {
                     Error(Previous, "Only built-in player-zone functions can be called directly.");
                     return expression;
                 }
-                expression = new RuntimeFunctionExpression(function.Name, ParseArguments());
+                expression = At(new RuntimeFunctionExpression(function.Name, ParseArguments()), callToken);
                 continue;
             }
 
             if (Match(TokenKind.Dot))
             {
+                var dotToken = Previous;
                 if (Current.Kind != TokenKind.Identifier)
                 {
                     Error(Current, "Expected a property or method name after '.'.");
@@ -146,31 +150,33 @@ public sealed class ExpressionParser
                 if (Match(TokenKind.OpenParen))
                 {
                     var arguments = ParseArguments();
-                    expression = new CollectionMethodExpression(expression, name, arguments);
+                    expression = At(new CollectionMethodExpression(expression, name, arguments), dotToken);
                 }
                 else
-                    expression = new RuntimeMemberExpression(expression, name);
+                    expression = At(new RuntimeMemberExpression(expression, name), dotToken);
                 continue;
             }
 
             if (Match(TokenKind.OpenBracket))
             {
+                var indexToken = Previous;
                 var index = ParseExpression();
                 if (index is null) return expression;
                 if (!Match(TokenKind.CloseBracket)) Error(Current, "Expected ']' after index.");
-                expression = new IndexExpression(expression, index);
+                expression = At(new IndexExpression(expression, index), indexToken);
                 continue;
             }
 
             if (Match(TokenKind.Increment) || Match(TokenKind.Decrement))
             {
-                var delta = Previous.Kind == TokenKind.Increment ? 1 : -1;
+                var incrementToken = Previous;
+                var delta = incrementToken.Kind == TokenKind.Increment ? 1 : -1;
                 if (expression is not VariableExpression variable)
                 {
                     Error(Previous, "Increment and decrement require a variable.");
                     return expression;
                 }
-                expression = new IncrementExpression(variable.Name, delta);
+                expression = At(new IncrementExpression(variable.Name, delta), incrementToken);
                 continue;
             }
             return expression;
@@ -219,6 +225,9 @@ public sealed class ExpressionParser
         rightAssociative = kind == TokenKind.Caret;
         return precedence >= 0;
     }
+
+    private static RuntimeExpression At(RuntimeExpression expression, Token token) =>
+        expression with { SourceLine = token.Line, SourceColumn = token.Column };
 
     private Token Current => _tokens[Math.Min(_position, _tokens.Count - 1)];
     private Token Peek(int offset) => _tokens[Math.Min(_position + offset, _tokens.Count - 1)];

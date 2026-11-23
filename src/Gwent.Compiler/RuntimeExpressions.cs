@@ -4,6 +4,8 @@ namespace Gwent.Compiler;
 
 public abstract record RuntimeExpression
 {
+    public int SourceLine { get; init; } = 1;
+    public int SourceColumn { get; init; }
     public abstract RuntimeValue Evaluate(RuntimeExecutionContext context);
 }
 

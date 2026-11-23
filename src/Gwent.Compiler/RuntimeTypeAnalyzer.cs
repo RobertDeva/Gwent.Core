@@ -456,7 +456,8 @@ public sealed class RuntimeTypeAnalyzer
         IReadOnlyDictionary<string, RuntimeType> variables) =>
         variables.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
 
-    private void Add(string message) => _diagnostics.Add(new Diagnostic(1, message));
+    private void Add(string message, RuntimeExpression? location = null) =>
+        _diagnostics.Add(new Diagnostic(location?.SourceLine ?? 1, message, location?.SourceColumn ?? 0));
 
     private static RuntimeType ToRuntimeType(RuntimeParameterType type) => type switch
     {
