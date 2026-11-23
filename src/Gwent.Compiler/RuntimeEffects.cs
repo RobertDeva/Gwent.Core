@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Gwent.Engine;
 
 namespace Gwent.Compiler;
 
@@ -9,28 +8,25 @@ public sealed record RuntimeParameterDefinition(string Name, RuntimeParameterTyp
 
 public sealed record RuntimeEffectInvocation(
     string EffectId,
-    IReadOnlyDictionary<string, RuntimeExpression> Arguments);
+    IReadOnlyDictionary<string, RuntimeExpression> Arguments,
+    RuntimeSelector Selector,
+    RuntimeEffectInvocation? PostAction = null);
 
 public sealed class RuntimeEffectDefinition
 {
     public RuntimeEffectDefinition(
         string id,
         IEnumerable<RuntimeParameterDefinition> parameters,
-        RuntimeSelector selector,
-        IEnumerable<RuntimeStatement> action,
-        RuntimeEffectInvocation? postAction = null)
+        IEnumerable<RuntimeStatement> action)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Effect id is required.", nameof(id));
         ArgumentNullException.ThrowIfNull(parameters);
-        ArgumentNullException.ThrowIfNull(selector);
         ArgumentNullException.ThrowIfNull(action);
 
         Id = id;
         Parameters = Array.AsReadOnly(parameters.ToArray());
-        Selector = selector;
         Action = Array.AsReadOnly(action.ToArray());
-        PostAction = postAction;
 
         var duplicate = Parameters.GroupBy(parameter => parameter.Name, StringComparer.Ordinal)
             .FirstOrDefault(group => group.Count() > 1);
@@ -42,9 +38,7 @@ public sealed class RuntimeEffectDefinition
 
     public string Id { get; }
     public IReadOnlyList<RuntimeParameterDefinition> Parameters { get; }
-    public RuntimeSelector Selector { get; }
     public IReadOnlyList<RuntimeStatement> Action { get; }
-    public RuntimeEffectInvocation? PostAction { get; }
 }
 
 public sealed class RuntimeEffectCatalog
@@ -81,18 +75,19 @@ public sealed class RuntimeEffectExecutor
         _interpreter = interpreter ?? new RuntimeInterpreter();
     }
 
-    public IReadOnlyList<Card> Execute(
+    public IReadOnlyList<Gwent.Engine.Card> Execute(
         RuntimeEffectInvocation invocation,
         RuntimeExecutionContext context,
-        IReadOnlyList<Card>? parentTargets = null)
+        IReadOnlyList<Gwent.Engine.Card>? parentTargets = null)
     {
         ArgumentNullException.ThrowIfNull(invocation);
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(invocation.Selector);
         context.ConsumeInstruction();
 
         var definition = _catalog.Resolve(invocation.EffectId);
         var values = BindArguments(definition, invocation.Arguments, context);
-        var targets = definition.Selector.Select(context, parentTargets);
+        var targets = invocation.Selector.Select(context, parentTargets);
 
         context.EnterScope();
         try
@@ -102,8 +97,8 @@ public sealed class RuntimeEffectExecutor
             context.Scope.Define("targets", RuntimeValue.FromCards(targets));
             _interpreter.Execute(definition.Action, context);
 
-            if (definition.PostAction is not null)
-                Execute(definition.PostAction, context, targets);
+            if (invocation.PostAction is not null)
+                Execute(invocation.PostAction, context, targets);
         }
         finally { context.ExitScope(); }
 
