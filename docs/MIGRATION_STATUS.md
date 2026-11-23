@@ -22,6 +22,8 @@
 - Runtime card metadata and activation declarations compile into a card catalog. RuntimeCardProgram creates distinct engine card instances from those definitions and executes indexed activations against an explicit engine execution context.
 - Player-zone collections are live views when a game context exists. Add, Push, Remove, SendBottom, Pop, and Shuffle route mutations through validated engine transitions; local and filtered collections remain snapshots. Top-level effect execution validates card-zone integrity.
 - End-to-end DSL execution is covered by integration tests; current CI passes the complete build, test suite, and console smoke test.
+- Runtime DSL effect bodies are semantically analyzed during compilation, including identifier resolution, assignment compatibility, expression types, loop scopes, and boolean Find predicates. Program compilation aggregates effect-body and activation diagnostics before publishing an executable program.
+- Legacy card member semantics are represented explicitly: Owner resolves to a Player, OwnerId remains available as a string, Range exposes the allowed row names as a read-only indexed collection, and Row identifies the chosen instance row.
 
 ## Remaining
 
