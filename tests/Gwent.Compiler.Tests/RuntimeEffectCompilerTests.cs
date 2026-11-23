@@ -110,7 +110,7 @@ public sealed class RuntimeEffectCompilerTests
         var result = new RuntimeEffectCompiler().Compile(source);
 
         Assert.False(result.Success);
-        Assert.Null(result.Catalog);
+        Assert.NotNull(result.Catalog);
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Message.Contains("Unknown identifier 'missing'", StringComparison.Ordinal));
     }
@@ -132,7 +132,7 @@ public sealed class RuntimeEffectCompilerTests
         var result = new RuntimeEffectCompiler().Compile(source);
 
         Assert.False(result.Success);
-        Assert.Null(result.Catalog);
+        Assert.NotNull(result.Catalog);
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Message.Contains("numeric value", StringComparison.Ordinal));
     }

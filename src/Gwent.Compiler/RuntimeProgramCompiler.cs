@@ -21,11 +21,10 @@ public sealed class RuntimeProgramCompiler
         var effectResult = new RuntimeEffectCompiler().Compile(effectSource);
         var activationResult = new RuntimeActivationParser(activationSource).Parse();
         var diagnostics = effectResult.Diagnostics.Concat(activationResult.Diagnostics).ToList();
-        if (effectResult.Catalog is null || diagnostics.Count > 0)
+        if (effectResult.Catalog is null)
             return new RuntimeProgramCompilationResult(null, diagnostics.AsReadOnly());
 
         var catalog = effectResult.Catalog;
-        diagnostics.AddRange(new RuntimeTypeAnalyzer().Analyze(catalog));
         diagnostics.AddRange(new RuntimeTypeAnalyzer()
             .AnalyzeActivations(catalog, activationResult.Activations));
 

@@ -58,7 +58,7 @@ public sealed class RuntimeCardProgramCompiler
         var effectResult = new RuntimeEffectCompiler().Compile(effectSource);
         var cardResult = new RuntimeCardParser(cardSource).Parse();
         var diagnostics = effectResult.Diagnostics.Concat(cardResult.Diagnostics).ToList();
-        if (effectResult.Catalog is null || diagnostics.Count > 0)
+        if (effectResult.Catalog is null)
             return new RuntimeCardProgramCompilationResult(null, diagnostics.AsReadOnly());
 
         var cards = new Dictionary<string, RuntimeCardDefinition>(StringComparer.Ordinal);

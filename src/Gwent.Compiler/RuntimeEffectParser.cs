@@ -19,10 +19,8 @@ public sealed class RuntimeEffectCompiler
         if (parsed.Catalog is null) return parsed;
 
         var semanticDiagnostics = new RuntimeTypeAnalyzer().Analyze(parsed.Catalog);
-        if (semanticDiagnostics.Count == 0) return parsed;
-
         return new RuntimeEffectCompilationResult(
-            null, parsed.Diagnostics.Concat(semanticDiagnostics).ToArray());
+            parsed.Catalog, parsed.Diagnostics.Concat(semanticDiagnostics).ToArray());
     }
 }
 
