@@ -15,27 +15,37 @@ if (!compilation.Success)
     return 1;
 }
 
-var human = new Player("Player 1");
-var opponent = new Player("Player 2");
-var game = new Game(human, opponent);
+var first = new Player("Player 1");
+var second = new Player("Player 2");
+var game = new Game(first, second);
 
 foreach (var definition in compilation.Cards.Values)
-    game.AddToDeck(human, definition.CreateCard());
-
-while (game.Draw(human) is { } card)
 {
-    game.Play(human, card);
-    if (card.EffectId is not null)
-    {
-        var effect = compilation.Effects[card.EffectId];
-        card.IncreasePower(effect.PowerIncrease);
-    }
-    Console.WriteLine($"{card.Name,-22} {card.Row,-7} {card.Power,2} power");
+    game.AddToDeck(first, definition.CreateCard());
+    game.AddToDeck(second, definition.CreateCard());
 }
 
-Console.WriteLine($"\n{human.Id}: {Game.Score(human)}");
-foreach (var row in Enum.GetValues<Row>())
-    Console.WriteLine($"  {row,-7} {Game.Score(human, row),2}");
-Console.WriteLine($"{opponent.Id}: {Game.Score(opponent)}");
-Console.WriteLine(game.Winner is null ? "Result: draw" : $"Winner: {game.Winner.Id}");
+Console.WriteLine($"Round {game.RoundNumber}");
+for (var turn = 0; turn < 2; turn++)
+{
+    var player = game.CurrentPlayer;
+    var card = game.Draw(player);
+    if (card is not null)
+    {
+        game.Play(player, card);
+        if (card.EffectId is not null)
+            game.ApplyEffect(player, card, compilation.Effects[card.EffectId].ToEngineEffect());
+
+        Console.WriteLine($"{player.Id}: {card.Name} ({card.Row}, {card.Power} power)");
+    }
+    game.EndTurn();
+}
+
+game.Pass(game.CurrentPlayer);
+game.Pass(game.CurrentPlayer);
+
+Console.WriteLine($"\n{first.Id}: {first.Board.Score}");
+Console.WriteLine($"{second.Id}: {second.Board.Score}");
+Console.WriteLine(game.LastRoundWinner is null ? "Round result: draw" : $"Round winner: {game.LastRoundWinner.Id}");
+Console.WriteLine($"Rounds: {game.FirstRoundsWon} - {game.SecondRoundsWon}");
 return 0;

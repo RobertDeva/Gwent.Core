@@ -5,10 +5,25 @@ namespace Gwent.Engine;
 public enum Row { Melee, Ranged, Siege }
 public enum CardZone { Unassigned, Deck, Hand, Field, Graveyard }
 
+public sealed record CardEffect
+{
+    public CardEffect(string id, int powerIncrease)
+    {
+        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Effect id is required.", nameof(id));
+        if (powerIncrease < 0) throw new ArgumentOutOfRangeException(nameof(powerIncrease));
+        Id = id;
+        PowerIncrease = powerIncrease;
+    }
+
+    public string Id { get; }
+    public int PowerIncrease { get; }
+}
+
 public sealed class Card
 {
     private Guid? _gameId;
     private string? _ownerId;
+    private readonly HashSet<string> _appliedEffects = new(StringComparer.Ordinal);
 
     public Card(string definitionId, string name, int power, Row row, string? effectId = null)
     {
@@ -50,10 +65,17 @@ public sealed class Card
         Zone = zone;
     }
 
-    public void IncreasePower(int amount)
+    internal void ApplyEffect(CardEffect effect)
     {
-        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
-        Power = checked(Power + amount);
+        ArgumentNullException.ThrowIfNull(effect);
+        if (!StringComparer.Ordinal.Equals(EffectId, effect.Id))
+            throw new InvalidOperationException($"Effect '{effect.Id}' is not assigned to card '{DefinitionId}'.");
+        if (_appliedEffects.Contains(effect.Id))
+            throw new InvalidOperationException($"Effect '{effect.Id}' has already been applied to this card instance.");
+
+        var updatedPower = checked(Power + effect.PowerIncrease);
+        _appliedEffects.Add(effect.Id);
+        Power = updatedPower;
     }
 }
 

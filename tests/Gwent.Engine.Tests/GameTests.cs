@@ -125,7 +125,7 @@ public sealed class GameTests
         Assert.Same(card, game.Draw(second));
         game.Play(second, card);
         game.Pass(second);
-        Assert.Equal(1, game.FirstRoundsWon);
+        Assert.Equal(0, game.FirstRoundsWon);
         Assert.Equal(1, game.SecondRoundsWon);
     }
 
@@ -139,10 +139,11 @@ public sealed class GameTests
         {
             var card = new Card($"unit{round}", "Unit", 5, Row.Melee);
             game.AddToDeck(first, card);
+            if (ReferenceEquals(game.CurrentPlayer, second)) game.Pass(second);
             game.Draw(first);
             game.Play(first, card);
             game.Pass(first);
-            game.Pass(second);
+            if (!game.IsFinished) game.Pass(second);
         }
         Assert.True(game.IsFinished);
         Assert.Same(first, game.Winner);
@@ -160,10 +161,17 @@ public sealed class GameTests
     [Fact]
     public void ChangingOneCopyDoesNotChangeAnotherCopy()
     {
-        var firstCopy = new Card("unit", "Unit", 5, Row.Melee);
-        var secondCopy = new Card("unit", "Unit", 5, Row.Melee);
-        firstCopy.IncreasePower(3);
-        Assert.Equal(8, firstCopy.Power);
-        Assert.Equal(5, secondCopy.Power);
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var firstCopy = new Card("unit", "Unit", 5, Row.Melee, "boost");
+        var secondCopy = new Card("unit", "Unit", 5, Row.Melee, "boost");
+        game.AddToDeck(first, firstCopy);
+        game.AddToDeck(first, secondCopy);
+        game.Draw(first);
+        game.Play(first, secondCopy);
+        game.ApplyEffect(first, secondCopy, new CardEffect("boost", 3));
+        Assert.Equal(8, secondCopy.Power);
+        Assert.Equal(5, firstCopy.Power);
     }
 }

@@ -11,7 +11,10 @@ public sealed record Diagnostic(int Line, string Message)
 }
 
 // Compiled effect data is intentionally separate from engine execution.
-public sealed record CompiledEffect(string Id, int PowerIncrease);
+public sealed record CompiledEffect(string Id, int PowerIncrease)
+{
+    public CardEffect ToEngineEffect() => new(Id, PowerIncrease);
+}
 
 public sealed class CardDefinition
 {

@@ -2,25 +2,24 @@
 
 Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity remains an outer presentation adapter and is not referenced by Engine, Compiler, or Console.
 
-- Engine owns game state, zones, board rows, scoring, turn/round rules, and effect execution.
+- Engine owns card instances, zones, row-based boards, turn/round rules, scoring, and effect execution.
 - Compiler translates DSL source into validated card and effect definitions.
-- Console loads source and coordinates player commands; it does not implement game rules.
+- Console loads source and coordinates commands; it does not mutate game state or implement effect rules.
 
-## Invariants
+## Core invariants
 
-- Card definitions produce independent instances.
-- Each card instance belongs to one game, one owner, and one zone.
-- Game validates every zone transition and active-player command.
-- A player's field is divided into Melee, Ranged, and Siege rows.
-- Scores are derived from current board contents.
-- A player who passes cannot act again during that round.
-- A round resolves only after both players pass; field cards then move to graveyard.
+- Card definitions produce independent physical instances.
+- Each instance belongs to one game, one owner, and one zone.
+- Game validates every zone transition and active-player operation.
+- The field is divided into Melee, Ranged, and Siege rows; scores are derived from board contents.
+- Passing ends a player's participation in the current round. Both players must pass to resolve it.
+- A round winner earns one point; a tied round awards one point to each player. Field cards then move to graveyards.
 - The match ends when a player reaches two round points or the third round resolves.
-- A tied round awards one point to each player.
-- Effect execution belongs to Engine and receives explicit player/card context.
-- Compiler diagnostics do not publish partial catalogues.
+- Compiled effect data is converted into an Engine effect value and executed by Game with explicit player/card context.
+- An effect can only target its assigned card while it is on the active player's field, and each effect ID can be applied once per instance.
+- Compiler diagnostics are per compilation and invalid source publishes no partial catalogue.
 
-## Dependency direction
+## Dependencies
 
 ```text
 Gwent.Console -> Gwent.Compiler -> Gwent.Engine
