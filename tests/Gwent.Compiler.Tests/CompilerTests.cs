@@ -72,4 +72,20 @@ public sealed class CompilerTests
         Assert.NotEqual(firstCopy.InstanceId, secondCopy.InstanceId);
         Assert.Equal(firstCopy.DefinitionId, secondCopy.DefinitionId);
     }
+
+    [Fact]
+    public void CompilesFieldBoundRowEffectMetadata()
+    {
+        var result = new DslCompiler().Compile("""
+            effect frost boost 1 duration while-source-on-field operation set target both-players-in-row
+            card blizzard "Blizzard" power 0 row melee effect frost
+            """);
+
+        Assert.True(result.Success);
+        var effect = result.Effects["frost"].ToEngineEffect();
+        Assert.Equal(EffectDuration.WhileSourceOnField, effect.Duration);
+        Assert.Equal(EffectOperation.Set, effect.Operation);
+        Assert.Equal(EffectTargetScope.BothPlayersInRow, effect.TargetScope);
+    }
+
 }

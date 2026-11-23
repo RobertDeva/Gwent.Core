@@ -11,9 +11,14 @@ public sealed record Diagnostic(int Line, string Message)
 }
 
 // Compiled effect data is intentionally separate from engine execution.
-public sealed record CompiledEffect(string Id, int PowerIncrease)
+public sealed record CompiledEffect(
+    string Id,
+    int PowerIncrease,
+    EffectDuration Duration = EffectDuration.Instant,
+    EffectOperation Operation = EffectOperation.Add,
+    EffectTargetScope TargetScope = EffectTargetScope.SourceCard)
 {
-    public CardEffect ToEngineEffect() => new(Id, PowerIncrease);
+    public CardEffect ToEngineEffect() => new(Id, PowerIncrease, Duration, Operation, TargetScope);
 }
 
 public sealed class CardDefinition
@@ -90,7 +95,25 @@ public sealed class DslCompiler
                     continue;
                 }
 
-                if (!effects.TryAdd(id, new CompiledEffect(id, amount)))
+                var duration = effectMatch.Groups["duration"].Value switch
+                {
+                    "while-source-on-field" => EffectDuration.WhileSourceOnField,
+                    _ => EffectDuration.Instant
+                };
+                var operation = effectMatch.Groups["operation"].Value switch
+                {
+                    "set" => EffectOperation.Set,
+                    "multiply" => EffectOperation.Multiply,
+                    _ => EffectOperation.Add
+                };
+                var targetScope = effectMatch.Groups["target"].Value switch
+                {
+                    "own-row" => EffectTargetScope.OwnRow,
+                    "both-players-in-row" => EffectTargetScope.BothPlayersInRow,
+                    _ => EffectTargetScope.SourceCard
+                };
+
+                if (!effects.TryAdd(id, new CompiledEffect(id, amount, duration, operation, targetScope)))
                     diagnostics.Add(new Diagnostic(index + 1, $"Duplicate effect id '{id}'."));
                 continue;
             }

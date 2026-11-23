@@ -57,4 +57,34 @@ public sealed class CompilerEngineIntegrationTests
         Assert.Equal(8, Game.Score(player));
         Assert.NotEqual(first.InstanceId, second.InstanceId);
     }
+
+    [Fact]
+    public void CompiledPersistentEffectChangesAnOpponentCardPlayedLater()
+    {
+        var result = new DslCompiler().Compile("""
+            effect frost boost 1 duration while-source-on-field operation set target both-players-in-row
+            card blizzard "Blizzard" power 0 row melee effect frost
+            card unit "Unit" power 5 row melee
+            """);
+        Assert.True(result.Success);
+
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var weather = result.Cards["blizzard"].CreateCard();
+        var unit = result.Cards["unit"].CreateCard();
+        game.AddToDeck(first, weather);
+        game.AddToDeck(second, unit);
+        game.Draw(first);
+        game.Play(first, weather);
+        game.ApplyEffect(first, weather, result.Effects["frost"].ToEngineEffect());
+
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, unit);
+
+        Assert.Equal(1, unit.Power);
+        Assert.Equal(1, Game.Score(second));
+    }
+
 }

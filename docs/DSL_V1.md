@@ -7,7 +7,7 @@ La primera versión del lenguaje es deliberadamente pequeña y explícita. Su ob
 Una declaración por línea:
 
 ```text
-effect <identifier> boost <non-negative-integer>
+effect <identifier> boost <non-negative-integer> [duration <instant|while-source-on-field>] [operation <add|set|multiply>] [target <source|own-row|both-players-in-row>]
 card <identifier> "<display name>" power <non-negative-integer> row <melee|ranged|siege> [effect <effect-identifier>]
 ```
 
@@ -16,7 +16,11 @@ card <identifier> "<display name>" power <non-negative-integer> row <melee|range
 - Las cartas pueden referenciar efectos declarados en el mismo archivo.
 - Los números deben caber en un entero con signo de 32 bits; los valores fuera del rango producen diagnósticos.
 - La compilación es atómica: ante cualquier diagnóstico no se publica ningún catálogo parcial.
-- Un efecto `boost N` describe un aumento de N en la potencia de la carta que lo referencia. El compilador conserva esa descripción; la aplicación coordina su ejecución mediante la operación del motor.
+- Un efecto `boost N` conserva compatibilidad con el comportamiento inicial: es instantáneo, suma N y afecta a la carta fuente.
+- `duration while-source-on-field` mantiene el modificador activo mientras la carta fuente permanezca en el campo; `instant` es el valor predeterminado.
+- `operation` define si N se suma (`add`, predeterminado), reemplaza la potencia (`set`) o la multiplica (`multiply`).
+- `target source` afecta solo a la carta fuente; `own-row` afecta a las demás cartas de su fila y propietario; `both-players-in-row` afecta a las demás cartas de esa fila en ambos campos.
+- Los efectos persistentes se recalculan al cambiar el campo y se retiran cuando sale su fuente o termina la ronda. El sistema de filtrado por tipo/rango de carta todavía no está implementado.
 
 ## Ejecución
 
