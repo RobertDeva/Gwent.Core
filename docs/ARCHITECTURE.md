@@ -14,46 +14,36 @@ Gwent.Tests ─────────┘                    └──> Gwent.E
 
 The compiler translates source text into validated definitions and effect data. The engine owns game state and enforces all game rules. The console coordinates user input and renders results; it contains no game rules.
 
-## Projects
-
-- `src/Gwent.Engine`: domain entities, board/zones, players, decks, turns, rounds, scoring, and effect contracts.
-- `src/Gwent.Compiler`: lexer, parser, syntax tree, semantic analysis, diagnostics, and DSL-to-engine binding.
-- `src/Gwent.Console`: command-line application and sample game workflow.
-- `tests/Gwent.Engine.Tests`: isolated domain and rule tests.
-- `tests/Gwent.Compiler.Tests`: lexer, parser, semantic and interpreter tests.
-- `tests/Gwent.IntegrationTests`: end-to-end compiler-to-game scenarios.
-
 ## Core invariants
 
-- Every match owns its own board and zones; no mutable match state is static.
-- A card definition describes a reusable template; each physical copy is a distinct card instance with its own identity and mutable state.
-- Multiple instances of the same definition may coexist in the same zone when game rules permit.
-- A card instance belongs to exactly one zone at a time.
-- Zone moves validate source membership, destination capacity, ownership, and nullability before mutation.
-- Score is derived from current board state through one authoritative calculation path.
-- Compiler diagnostics are scoped to one compilation; no mutable static error or execution state.
-- Invalid source must fail with diagnostics, not partially register definitions.
-- DSL effects operate through explicit engine-facing context and constrained capabilities, not global state or reflection-based scene lookup.
+- Every match owns its own players and zones; no mutable match state is static.
+- A definition is a reusable template; each card instance has an independent identity and mutable state.
+- Multiple instances of one definition may coexist in the same zone.
+- A card instance is assigned to one game and occupies exactly one player zone at a time.
+- Zone transitions are performed by the game, validate player ownership and source membership, and cannot be bypassed through public collection views.
+- Drawing moves the top card from deck to hand; playing moves a card from hand to field; destroying moves a card from field to graveyard.
+- An empty deck returns no card when drawn; it does not corrupt game state.
+- Score is derived only from cards currently on the field through one authoritative calculation path.
+- Compiler diagnostics are scoped to one compilation; invalid source does not publish partial catalogs.
+- DSL effects operate through explicit engine-facing context and constrained capabilities, not global state or scene lookups.
 
-## Runtime flow
+## Projects
 
-1. Console loads a DSL source file.
-2. Compiler tokenizes and parses it into a syntax representation.
-3. Semantic analysis validates declarations, references, types, and effect operations.
-4. Successful compilation returns an immutable definition catalog plus diagnostics.
-5. Console constructs players, decks, and a match using that catalog.
-6. Player commands invoke engine operations; compiled effects execute through an explicit effect context.
-7. Console displays the resulting state and score.
+- `src/Gwent.Engine`: domain entities, zones, players, scoring, and game operations.
+- `src/Gwent.Compiler`: DSL parsing, semantic validation, diagnostics, and definition catalog.
+- `src/Gwent.Console`: command-line host and sample game workflow.
+- `tests/Gwent.Engine.Tests`: isolated domain and rule tests.
+- `tests/Gwent.Compiler.Tests`: compiler tests.
+- `tests/Gwent.IntegrationTests`: compiler-to-engine scenarios.
 
 ## Engineering decisions
 
 - Target framework: .NET 10 (`net10.0`), independent of Unity's runtime profile.
 - Nullable reference types and implicit usings are enabled centrally.
 - Warnings are treated as errors; analyzer/style level is set centrally.
-- Prefer composition and explicit interfaces over inheritance-heavy card hierarchies.
+- Prefer composition and explicit boundaries over inheritance-heavy hierarchies.
 - Add abstractions only where they protect a domain boundary or support a real use case.
-- Keep public APIs small and validate invariants at domain boundaries.
 
 ## Testing strategy
 
-Unit tests cover domain invariants and compiler stages. Integration tests compile a representative DSL file, instantiate a match, execute effects, and assert observable state and scores. Console smoke tests verify a complete playable scenario. CI must build and run all tests on every pull request.
+Unit tests cover domain invariants and compiler stages. Integration tests compile DSL, instantiate independent copies, move them through game zones, execute effects, and assert observable state and scores. CI builds and runs all tests on every push and pull request.

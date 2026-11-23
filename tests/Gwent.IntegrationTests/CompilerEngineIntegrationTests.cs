@@ -19,7 +19,9 @@ public sealed class CompilerEngineIntegrationTests
         var opponent = new Player("opponent");
         var game = new Game(player, opponent);
         var card = result.Cards["vanguard"].CreateCard();
+        game.AddToDeck(player, card);
 
+        Assert.Same(card, game.Draw(player));
         game.Play(player, card);
         var effect = result.Effects[card.EffectId!];
         card.IncreasePower(effect.PowerIncrease);
@@ -30,7 +32,7 @@ public sealed class CompilerEngineIntegrationTests
     }
 
     [Fact]
-    public void MultipleCopiesFromDslDefinitionCanExistInSameGame()
+    public void MultipleCopiesFromDslDefinitionCanMoveThroughTheSameLifecycle()
     {
         var result = new DslCompiler().Compile("""
             card vanguard "Vanguard" power 4 row melee
@@ -40,9 +42,15 @@ public sealed class CompilerEngineIntegrationTests
         var player = new Player("human");
         var game = new Game(player, new Player("opponent"));
         var definition = result.Cards["vanguard"];
+        var first = definition.CreateCard();
+        var second = definition.CreateCard();
 
-        game.Play(player, definition.CreateCard());
-        game.Play(player, definition.CreateCard());
+        game.AddToDeck(player, first);
+        game.AddToDeck(player, second);
+        Assert.Same(second, game.Draw(player));
+        Assert.Same(first, game.Draw(player));
+        game.Play(player, first);
+        game.Play(player, second);
 
         Assert.Equal(2, player.Field.Count);
         Assert.Equal(8, Game.Score(player));
