@@ -159,6 +159,31 @@ public sealed class RuntimeCardProgramCompilerTests
         Assert.Throws<InvalidOperationException>(() => program.Activate(card, 0, context));
     }
 
+
+    [Fact]
+    public void ActivationRejectsCardsFromAnotherGame()
+    {
+        var firstPlayer = new Gwent.Engine.Player("p1");
+        var firstGame = new Gwent.Engine.Game(firstPlayer, new Gwent.Engine.Player("p2"));
+        var foreignPlayer = new Gwent.Engine.Player("p1");
+        var foreignGame = new Gwent.Engine.Game(foreignPlayer, new Gwent.Engine.Player("p2"));
+        var card = new Gwent.Engine.Card("unit", "Unit", 1, Gwent.Engine.Row.Melee);
+        foreignGame.AddToDeck(foreignPlayer, card);
+        foreignGame.MoveCard(card, foreignPlayer, Gwent.Engine.CardZone.Field);
+        var invocation = new RuntimeEffectInvocation(
+            "noop", new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector("field", new LiteralExpression(RuntimeValue.From(false))));
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", [invocation]);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([new RuntimeEffectDefinition("noop", [], [])]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+        var context = new RuntimeExecutionContext(firstPlayer, card, firstGame);
+
+        Assert.Throws<ArgumentException>(() => program.Activate(card, 0, context));
+    }
+
     [Fact]
     public void ActivationRejectsATriggerPlayerWhoDoesNotOwnTheCard()
     {
