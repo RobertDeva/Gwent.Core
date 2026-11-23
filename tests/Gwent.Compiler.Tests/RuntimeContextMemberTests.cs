@@ -27,6 +27,25 @@ public sealed class RuntimeContextMemberTests
 
 
 
+
+    [Fact]
+    public void ExposesCardCollectionCountAsAProperty()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var card = new Card("unit", "Unit", 1, Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+        var context = new RuntimeExecutionContext(
+            player, new Card("source", "Source", 1, Row.Melee), game);
+
+        var direct = new ExpressionParser("context.Hand.Count").Parse()!;
+        var helper = new ExpressionParser("HandOfPlayer(context.TriggerPlayer).Count").Parse()!;
+
+        Assert.Equal(1, direct.Evaluate(context).AsNumber());
+        Assert.Equal(1, helper.Evaluate(context).AsNumber());
+    }
+
     [Fact]
     public void ExposesCardOwnerAndAllowedRangesWithTheirLegacyTypes()
     {

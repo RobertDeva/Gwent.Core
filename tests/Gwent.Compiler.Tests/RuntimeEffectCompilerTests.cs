@@ -116,6 +116,25 @@ public sealed class RuntimeEffectCompilerTests
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
     }
 
+
+    [Fact]
+    public void TypeChecksCollectionCountProperties()
+    {
+        var source = """
+            effect {
+                Name: "count",
+                Action: (targets, context) => {
+                    let ownCount = context.Hand.Count;
+                    let opponentCount = HandOfPlayer(context.OtherPlayer).Count;
+                }
+            }
+            """;
+
+        var result = new RuntimeEffectCompiler().Compile(source);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+    }
+
     [Fact]
     public void RejectsLegacyPlayerZoneHelpersWithNonPlayerArguments()
     {

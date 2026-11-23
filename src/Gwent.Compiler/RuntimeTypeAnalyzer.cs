@@ -364,6 +364,11 @@ public sealed class RuntimeTypeAnalyzer
                 "Hand" or "Deck" or "Field" or "Graveyard" or "Board" or "OtherHand" or "OtherDeck" or "OtherField" => RuntimeType.CardCollection,
                 _ => UnknownMember(name, effectId)
             },
+            RuntimeType.CardCollection => name switch
+            {
+                "Count" => RuntimeType.Number,
+                _ => UnknownMember(name, effectId)
+            },
             RuntimeType.StringCollection => name switch
             {
                 "Count" => RuntimeType.Number,

@@ -12,6 +12,7 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         return target.Kind switch
         {
             RuntimeValueKind.Card => ReadCard(target.AsCard(), context),
+            RuntimeValueKind.CardCollection => ReadCardCollection(target.AsCardCollection()),
             RuntimeValueKind.StringCollection => ReadStringCollection(target.AsStrings()),
             RuntimeValueKind.Player => ReadPlayer(target.AsPlayer(), context),
             RuntimeValueKind.Game => ReadGame(target.AsGame()),
@@ -35,6 +36,12 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "Type" => RuntimeValue.From(card.Type),
         "Rank" => RuntimeValue.From(card.Rank),
         "EffectId" => RuntimeValue.From(card.EffectId ?? string.Empty),
+        _ => throw UnknownMember()
+    };
+
+    private RuntimeValue ReadCardCollection(RuntimeCardCollection collection) => MemberName switch
+    {
+        "Count" => RuntimeValue.From(collection.Count),
         _ => throw UnknownMember()
     };
 
