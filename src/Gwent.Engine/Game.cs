@@ -258,6 +258,17 @@ public sealed class Game
         player.MoveToGraveyard(card);
     }
 
+    public void ApplyEffect(Player player, Card card, CardEffect effect)
+    {
+        ValidateActivePlayer(player);
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(effect);
+        if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
+            !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
+            throw new InvalidOperationException("Effects can only target a card on the active player's field.");
+        card.ApplyEffect(effect);
+    }
+
     public void EndTurn()
     {
         EnsureNotFinished();
