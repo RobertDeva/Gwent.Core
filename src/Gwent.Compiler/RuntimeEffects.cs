@@ -60,7 +60,7 @@ public sealed class RuntimeEffectCatalog
         _effects = new ReadOnlyDictionary<string, RuntimeEffectDefinition>(catalog);
     }
 
-    public IReadOnlyCollection<RuntimeEffectDefinition> Effects => _effects.Values;
+    public IReadOnlyCollection<RuntimeEffectDefinition> Effects => _effects.Values.ToArray();
 
     public RuntimeEffectDefinition Resolve(string id) =>
         _effects.TryGetValue(id, out var effect)
