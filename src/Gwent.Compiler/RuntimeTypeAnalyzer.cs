@@ -30,7 +30,7 @@ public sealed class RuntimeTypeAnalyzer
         var actualType = Infer(expression,
             variables ?? new Dictionary<string, RuntimeType>(StringComparer.Ordinal), "card");
         if (actualType != expectedType && actualType != RuntimeType.Unknown)
-            Add($"Expression expects '{expectedType}', but received '{actualType}'.");
+            Add($"Expression expects '{expectedType}', but received '{actualType}'.", expression);
         return _diagnostics.ToArray();
     }
 
@@ -217,12 +217,12 @@ public sealed class RuntimeTypeAnalyzer
                 };
             case VariableExpression variable:
                 if (variables.TryGetValue(variable.Name, out var type)) return type;
-                Add($"Unknown identifier '{variable.Name}' in effect '{effectId}'.");
+                Add($"Unknown identifier '{variable.Name}' in effect '{effectId}'.", variable);
                 return RuntimeType.Unknown;
             case CardPropertyExpression property:
                 var propertyTargetType = Infer(property.Target, variables, effectId);
                 if (propertyTargetType != RuntimeType.Card && propertyTargetType != RuntimeType.Unknown)
-                    Add($"Card property '{property.Property}' in effect '{effectId}' requires a card target.");
+                    Add($"Card property '{property.Property}' in effect '{effectId}' requires a card target.", property);
                 return property.Property switch
                 {
                     CardProperty.Power => RuntimeType.Number,
@@ -234,14 +234,14 @@ public sealed class RuntimeTypeAnalyzer
                 if (function.FunctionName.ToLowerInvariant() is not
                     ("handofplayer" or "deckofplayer" or "fieldofplayer" or "graveyardofplayer"))
                 {
-                    Add($"Unknown function '{function.FunctionName}' in effect '{effectId}'.");
+                    Add($"Unknown function '{function.FunctionName}' in effect '{effectId}'.", function);
                     return RuntimeType.Unknown;
                 }
                 if (functionArguments.Length != 1)
-                    Add($"Function '{function.FunctionName}' in effect '{effectId}' requires one Player argument.");
+                    Add($"Function '{function.FunctionName}' in effect '{effectId}' requires one Player argument.", function);
                 else if (functionArguments[0] != RuntimeType.Player &&
                          functionArguments[0] != RuntimeType.Unknown)
-                    Add($"Function '{function.FunctionName}' in effect '{effectId}' requires a Player argument.");
+                    Add($"Function '{function.FunctionName}' in effect '{effectId}' requires a Player argument.", function);
                 return RuntimeType.CardCollection;
             case RuntimeMemberExpression member:
                 return InferMember(member, variables, effectId);
@@ -252,30 +252,30 @@ public sealed class RuntimeTypeAnalyzer
                 var requiredType = unary.Operator == RuntimeUnaryOperator.Not
                     ? RuntimeType.Boolean : RuntimeType.Number;
                 if (operandType != requiredType && operandType != RuntimeType.Unknown)
-                    Add($"Unary operator '{unary.Operator}' in effect '{effectId}' requires '{requiredType}'.");
+                    Add($"Unary operator '{unary.Operator}' in effect '{effectId}' requires '{requiredType}'.", unary);
                 return requiredType;
             case IncrementExpression increment:
                 if (!variables.TryGetValue(increment.VariableName, out var incrementType))
-                    Add($"Unknown identifier '{increment.VariableName}' in effect '{effectId}'.");
+                    Add($"Unknown identifier '{increment.VariableName}' in effect '{effectId}'.", increment);
                 else if (incrementType != RuntimeType.Number && incrementType != RuntimeType.Unknown)
-                    Add($"Increment/decrement in effect '{effectId}' requires a numeric variable.");
+                    Add($"Increment/decrement in effect '{effectId}' requires a numeric variable.", increment);
                 return RuntimeType.Number;
             case AssignmentExpression assignment:
                 var assignedValueType = Infer(assignment.ValueExpression, variables, effectId);
                 if (!variables.TryGetValue(assignment.Name, out var declaredVariableType))
-                    Add($"Unknown identifier '{assignment.Name}' in effect '{effectId}'.");
+                    Add($"Unknown identifier '{assignment.Name}' in effect '{effectId}'.", assignment);
                 else if (declaredVariableType != RuntimeType.Unknown &&
                          assignedValueType != RuntimeType.Unknown &&
                          declaredVariableType != assignedValueType)
-                    Add($"Cannot assign '{assignedValueType}' to variable '{assignment.Name}' of type '{declaredVariableType}'.");
+                    Add($"Cannot assign '{assignedValueType}' to variable '{assignment.Name}' of type '{declaredVariableType}'.", assignment);
                 return assignedValueType;
             case CardPowerAssignmentExpression assignment:
                 var targetType = Infer(assignment.Target, variables, effectId);
                 var valueType = Infer(assignment.ValueExpression, variables, effectId);
                 if (targetType != RuntimeType.Card && targetType != RuntimeType.Unknown)
-                    Add($"Card Power assignment in effect '{effectId}' requires a card target.");
+                    Add($"Card Power assignment in effect '{effectId}' requires a card target.", assignment);
                 if (valueType != RuntimeType.Number && valueType != RuntimeType.Unknown)
-                    Add($"Card Power assignment in effect '{effectId}' requires a numeric value.");
+                    Add($"Card Power assignment in effect '{effectId}' requires a numeric value.", assignment);
                 return RuntimeType.Number;
             case LambdaExpression lambda:
                 var lambdaVariables = new Dictionary<string, RuntimeType>(variables, StringComparer.Ordinal)
@@ -290,20 +290,20 @@ public sealed class RuntimeTypeAnalyzer
                 if (collection != RuntimeType.CardCollection &&
                     collection != RuntimeType.StringCollection &&
                     collection != RuntimeType.Unknown)
-                    Add($"Indexer in effect '{effectId}' requires an indexable collection.");
+                    Add($"Indexer in effect '{effectId}' requires an indexable collection.", index);
                 if (indexType != RuntimeType.Number && indexType != RuntimeType.Unknown)
-                    Add($"Collection index in effect '{effectId}' must be numeric.");
+                    Add($"Collection index in effect '{effectId}' must be numeric.", index);
                 return collection == RuntimeType.StringCollection ? RuntimeType.String : RuntimeType.Card;
             case CollectionMethodExpression method:
                 var receiver = Infer(method.Collection, variables, effectId);
                 if (receiver != RuntimeType.CardCollection && receiver != RuntimeType.Unknown)
-                    Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires a card collection.");
+                    Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires a card collection.", method);
                 if (method.MethodName == "Find")
                 {
                     if (method.Arguments.Count != 1 ||
                         method.Arguments[0] is not LambdaExpression predicate)
                     {
-                        Add($"Find in effect '{effectId}' requires one lambda predicate.");
+                        Add($"Find in effect '{effectId}' requires one lambda predicate.", method);
                         return RuntimeType.CardCollection;
                     }
 
@@ -311,7 +311,7 @@ public sealed class RuntimeTypeAnalyzer
                     predicateVariables[predicate.ParameterName] = RuntimeType.Card;
                     var predicateType = Infer(predicate.Body, predicateVariables, effectId);
                     if (predicateType != RuntimeType.Boolean && predicateType != RuntimeType.Unknown)
-                        Add($"Find predicate in effect '{effectId}' must return Boolean.");
+                        Add($"Find predicate in effect '{effectId}' must return Boolean.", method.Arguments[0]);
                     return RuntimeType.CardCollection;
                 }
 
@@ -321,17 +321,17 @@ public sealed class RuntimeTypeAnalyzer
                 {
                     if (argumentTypes.Length != 1 ||
                         argumentTypes[0] != RuntimeType.Card && argumentTypes[0] != RuntimeType.Unknown)
-                        Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires one card argument.");
+                        Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires one card argument.", method);
                     return RuntimeType.CardCollection;
                 }
                 if (method.MethodName is "Pop" or "Count" or "Shuffle" && argumentTypes.Length != 0)
-                    Add($"Collection operation '{method.MethodName}' in effect '{effectId}' does not accept arguments.");
+                    Add($"Collection operation '{method.MethodName}' in effect '{effectId}' does not accept arguments.", method);
                 return method.MethodName switch
                 {
                     "Pop" => RuntimeType.Card,
                     "Count" => RuntimeType.Number,
                     "Shuffle" => RuntimeType.CardCollection,
-                    _ => UnknownCollectionMethod(method.MethodName, effectId)
+                    _ => UnknownCollectionMethod(method.MethodName, effectId, method)
                 };
             default:
                 Add($"Unsupported expression '{expression.GetType().Name}' in effect '{effectId}'.");
@@ -354,7 +354,7 @@ public sealed class RuntimeTypeAnalyzer
                 "Owner" => RuntimeType.Player,
                 "Range" => RuntimeType.StringCollection,
                 "Name" or "Description" or "OwnerId" or "Row" or "DefinitionId" or "EffectId" or "Faction" or "Type" or "Rank" => RuntimeType.String,
-                _ => UnknownMember(name, effectId)
+                _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.Context => name switch
             {
@@ -407,7 +407,7 @@ public sealed class RuntimeTypeAnalyzer
             case RuntimeBinaryOperator.Divide:
             case RuntimeBinaryOperator.Modulo:
             case RuntimeBinaryOperator.Power:
-                RequireTypes(left, right, RuntimeType.Number, expression.Operator.ToString(), effectId);
+                RequireTypes(left, right, RuntimeType.Number, expression.Operator.ToString(), effectId, expression);
                 return RuntimeType.Number;
             case RuntimeBinaryOperator.Greater:
             case RuntimeBinaryOperator.GreaterOrEqual:
@@ -417,38 +417,38 @@ public sealed class RuntimeTypeAnalyzer
                 return RuntimeType.Boolean;
             case RuntimeBinaryOperator.And:
             case RuntimeBinaryOperator.Or:
-                RequireTypes(left, right, RuntimeType.Boolean, expression.Operator.ToString(), effectId);
+                RequireTypes(left, right, RuntimeType.Boolean, expression.Operator.ToString(), effectId, expression);
                 return RuntimeType.Boolean;
             case RuntimeBinaryOperator.Concatenate:
             case RuntimeBinaryOperator.ConcatenateWithSpace:
-                RequireTypes(left, right, RuntimeType.String, expression.Operator.ToString(), effectId);
+                RequireTypes(left, right, RuntimeType.String, expression.Operator.ToString(), effectId, expression);
                 return RuntimeType.String;
             case RuntimeBinaryOperator.Equal:
             case RuntimeBinaryOperator.NotEqual:
                 if (left != RuntimeType.Unknown && right != RuntimeType.Unknown && left != right)
-                    Add($"Equality operands in effect '{effectId}' have incompatible types '{left}' and '{right}'.");
+                    Add($"Equality operands in effect '{effectId}' have incompatible types '{left}' and '{right}'.", expression);
                 return RuntimeType.Boolean;
             default:
                 return RuntimeType.Unknown;
         }
     }
 
-    private void RequireTypes(RuntimeType left, RuntimeType right, RuntimeType expected, string operation, string effectId)
+    private void RequireTypes(RuntimeType left, RuntimeType right, RuntimeType expected, string operation, string effectId, RuntimeExpression location)
     {
         if ((left != expected && left != RuntimeType.Unknown) ||
             (right != expected && right != RuntimeType.Unknown))
-            Add($"Operator '{operation}' in effect '{effectId}' requires '{expected}' operands.");
+            Add($"Operator '{operation}' in effect '{effectId}' requires '{expected}' operands.", location);
     }
 
-    private RuntimeType UnknownCollectionMethod(string name, string effectId)
+    private RuntimeType UnknownCollectionMethod(string name, string effectId, RuntimeExpression location)
     {
-        Add($"Unknown collection operation '{name}' in effect '{effectId}'.");
+        Add($"Unknown collection operation '{name}' in effect '{effectId}'.", location);
         return RuntimeType.Unknown;
     }
 
-    private RuntimeType UnknownMember(string name, string effectId)
+    private RuntimeType UnknownMember(string name, string effectId, RuntimeExpression location)
     {
-        Add($"Unknown member '{name}' in effect '{effectId}'.");
+        Add($"Unknown member '{name}' in effect '{effectId}'.", location);
         return RuntimeType.Unknown;
     }
 
