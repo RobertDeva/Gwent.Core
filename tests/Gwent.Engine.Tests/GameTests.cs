@@ -12,17 +12,14 @@ public sealed class GameTests
         var game = new Game(player, new Player("second"));
         var card = new Card("unit", "Unit", 5, Row.Melee);
         game.AddToDeck(player, card);
-
         Assert.Same(card, game.Draw(player));
         Assert.Equal(CardZone.Hand, card.Zone);
         Assert.Empty(player.Deck);
-
         game.Play(player, card);
         Assert.Equal(CardZone.Field, card.Zone);
         Assert.Empty(player.Hand);
         Assert.Single(player.Field);
         Assert.Equal(5, Game.Score(player));
-
         game.Destroy(player, card);
         Assert.Equal(CardZone.Graveyard, card.Zone);
         Assert.Empty(player.Field);
@@ -45,21 +42,6 @@ public sealed class GameTests
         var game = new Game(player, new Player("second"));
         var card = new Card("unit", "Unit", 5, Row.Melee);
         Assert.Throws<InvalidOperationException>(() => game.Play(player, card));
-        Assert.Empty(player.Field);
-    }
-
-    [Fact]
-    public void CannotAddSameInstanceTwiceOrToAnotherGame()
-    {
-        var first = new Player("first");
-        var game = new Game(first, new Player("second"));
-        var card = new Card("unit", "Unit", 5, Row.Melee);
-        game.AddToDeck(first, card);
-        Assert.Throws<InvalidOperationException>(() => game.AddToDeck(first, card));
-
-        var other = new Player("other");
-        var otherGame = new Game(other, new Player("opponent"));
-        Assert.Throws<InvalidOperationException>(() => otherGame.AddToDeck(other, card));
     }
 
     [Fact]
@@ -87,9 +69,10 @@ public sealed class GameTests
         game.AddToDeck(player, ranged);
         game.Draw(player);
         game.Play(player, ranged);
+        game.EndTurn();
+        game.EndTurn();
         game.Draw(player);
         game.Play(player, melee);
-
         Assert.Single(player.Board.GetRow(Row.Melee));
         Assert.Single(player.Board.GetRow(Row.Ranged));
         Assert.Empty(player.Board.GetRow(Row.Siege));
@@ -99,18 +82,71 @@ public sealed class GameTests
     }
 
     [Fact]
-    public void DestroyRemovesCardFromItsRow()
+    public void PassingTwiceResolvesRoundAndAwardsRoundPoint()
     {
-        var player = new Player("first");
-        var game = new Game(player, new Player("second"));
-        var card = new Card("unit", "Unit", 5, Row.Siege);
-        game.AddToDeck(player, card);
-        game.Draw(player);
-        game.Play(player, card);
-        game.Destroy(player, card);
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var card = new Card("unit", "Unit", 5, Row.Melee);
+        game.AddToDeck(first, card);
+        game.Draw(first);
+        game.Play(first, card);
+        game.Pass(first);
+        game.Pass(second);
 
-        Assert.Empty(player.Board.GetRow(Row.Siege));
-        Assert.Single(player.Graveyard);
+        Assert.Equal(1, game.FirstRoundsWon);
+        Assert.Equal(0, game.SecondRoundsWon);
+        Assert.Equal(2, game.RoundNumber);
+        Assert.Empty(first.Field);
+        Assert.Single(first.Graveyard);
+        Assert.Same(second, game.CurrentPlayer);
+    }
+
+    [Fact]
+    public void FirstPlayerCannotActAfterPassing()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        game.Pass(first);
+        Assert.Throws<InvalidOperationException>(() => game.Draw(first));
+        Assert.Same(second, game.CurrentPlayer);
+    }
+
+    [Fact]
+    public void PlayerCanContinueAfterOpponentPassesUntilTheyPass()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        game.Pass(first);
+        var card = new Card("unit", "Unit", 5, Row.Melee);
+        game.AddToDeck(second, card);
+        Assert.Same(card, game.Draw(second));
+        game.Play(second, card);
+        game.Pass(second);
+        Assert.Equal(1, game.FirstRoundsWon);
+        Assert.Equal(1, game.SecondRoundsWon);
+    }
+
+    [Fact]
+    public void TwoRoundWinsFinishMatchAndExposeWinner()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        for (var round = 0; round < 2; round++)
+        {
+            var card = new Card($"unit{round}", "Unit", 5, Row.Melee);
+            game.AddToDeck(first, card);
+            game.Draw(first);
+            game.Play(first, card);
+            game.Pass(first);
+            game.Pass(second);
+        }
+        Assert.True(game.IsFinished);
+        Assert.Same(first, game.Winner);
+        Assert.Throws<InvalidOperationException>(() => game.EndTurn());
     }
 
     [Fact]

@@ -2,21 +2,8 @@ using System.Collections.ObjectModel;
 
 namespace Gwent.Engine;
 
-public enum Row
-{
-    Melee,
-    Ranged,
-    Siege
-}
-
-public enum CardZone
-{
-    Unassigned,
-    Deck,
-    Hand,
-    Field,
-    Graveyard
-}
+public enum Row { Melee, Ranged, Siege }
+public enum CardZone { Unassigned, Deck, Hand, Field, Graveyard }
 
 public sealed class Card
 {
@@ -25,13 +12,10 @@ public sealed class Card
 
     public Card(string definitionId, string name, int power, Row row, string? effectId = null)
     {
-        if (string.IsNullOrWhiteSpace(definitionId))
-            throw new ArgumentException("Card definition id is required.", nameof(definitionId));
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Card name is required.", nameof(name));
+        if (string.IsNullOrWhiteSpace(definitionId)) throw new ArgumentException("Card definition id is required.", nameof(definitionId));
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Card name is required.", nameof(name));
         if (power < 0) throw new ArgumentOutOfRangeException(nameof(power));
         if (!Enum.IsDefined(row)) throw new ArgumentOutOfRangeException(nameof(row));
-
         InstanceId = Guid.NewGuid();
         DefinitionId = definitionId;
         Name = name;
@@ -54,8 +38,7 @@ public sealed class Card
     internal void Assign(Player owner, Guid gameId)
     {
         ArgumentNullException.ThrowIfNull(owner);
-        if (_gameId is not null)
-            throw new InvalidOperationException("A card instance already belongs to a game.");
+        if (_gameId is not null) throw new InvalidOperationException("A card instance already belongs to a game.");
         _gameId = gameId;
         _ownerId = owner.Id;
         Zone = CardZone.Deck;
@@ -63,8 +46,7 @@ public sealed class Card
 
     internal void MoveTo(CardZone zone)
     {
-        if (_gameId is null || _ownerId is null)
-            throw new InvalidOperationException("An unassigned card cannot change zones.");
+        if (_gameId is null || _ownerId is null) throw new InvalidOperationException("An unassigned card cannot change zones.");
         Zone = zone;
     }
 
@@ -101,19 +83,13 @@ public sealed class Board
         return _rows[row].Sum(card => card.Power);
     }
 
-    internal void Add(Card card)
-    {
-        ArgumentNullException.ThrowIfNull(card);
-        _rows[card.Row].Add(card);
-    }
+    internal void Add(Card card) => _rows[card.Row].Add(card);
 
     internal void Remove(Card card)
     {
-        ArgumentNullException.ThrowIfNull(card);
         var row = _rows[card.Row];
         var index = row.FindIndex(existing => existing.InstanceId == card.InstanceId);
-        if (index < 0)
-            throw new InvalidOperationException("Card instance is not on this board.");
+        if (index < 0) throw new InvalidOperationException("Card instance is not on this board.");
         row.RemoveAt(index);
     }
 
@@ -149,10 +125,6 @@ public sealed class Player
     public IReadOnlyList<Card> Field => Board.Cards;
     public IReadOnlyList<Card> Graveyard => _graveyardView;
 
-    internal bool Contains(Card card) =>
-        ContainsInstance(_deck, card) || ContainsInstance(_hand, card) ||
-        ContainsInstance(Board.Cards, card) || ContainsInstance(_graveyard, card);
-
     internal Card? DrawTopCard()
     {
         if (_deck.Count == 0) return null;
@@ -175,19 +147,23 @@ public sealed class Player
 
     internal void MoveToGraveyard(Card card)
     {
-        Board.Remove(card);
+        if (card.Zone == CardZone.Field) Board.Remove(card);
+        else if (card.Zone == CardZone.Hand) Remove(_hand, card, "hand");
+        else if (card.Zone == CardZone.Deck) Remove(_deck, card, "deck");
+        else throw new InvalidOperationException("Card is not in a movable zone.");
         card.MoveTo(CardZone.Graveyard);
         _graveyard.Add(card);
     }
 
-    private static bool ContainsInstance(IEnumerable<Card> cards, Card card) =>
-        cards.Any(existing => existing.InstanceId == card.InstanceId);
+    internal void ClearFieldToGraveyard()
+    {
+        foreach (var card in Board.Cards) MoveToGraveyard(card);
+    }
 
     private static void Remove(List<Card> cards, Card card, string zoneName)
     {
         var index = cards.FindIndex(existing => existing.InstanceId == card.InstanceId);
-        if (index < 0)
-            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is not in the player's {zoneName}.");
+        if (index < 0) throw new InvalidOperationException($"Card instance '{card.InstanceId}' is not in the player's {zoneName}.");
         cards.RemoveAt(index);
     }
 }
@@ -195,60 +171,89 @@ public sealed class Player
 public sealed class Game
 {
     private readonly Guid _id = Guid.NewGuid();
+    private readonly HashSet<Player> _passedPlayers = [];
+    private Player _roundStarter;
 
     public Game(Player first, Player second)
     {
         First = first ?? throw new ArgumentNullException(nameof(first));
         Second = second ?? throw new ArgumentNullException(nameof(second));
         if (ReferenceEquals(first, second)) throw new ArgumentException("A game requires two distinct players.");
+        _roundStarter = First;
+        CurrentPlayer = First;
     }
 
     public Player First { get; }
     public Player Second { get; }
-    public Player? Winner
+    public Player CurrentPlayer { get; private set; }
+    public int RoundNumber { get; private set; } = 1;
+    public int FirstRoundsWon { get; private set; }
+    public int SecondRoundsWon { get; private set; }
+    public Player? LastRoundWinner { get; private set; }
+    public bool IsFinished { get; private set; }
+    public Player? Winner => IsFinished
+        ? FirstRoundsWon == SecondRoundsWon ? null : FirstRoundsWon > SecondRoundsWon ? First : Second
+        : null;
+
+    public int RoundsWon(Player player)
     {
-        get
-        {
-            var first = Score(First);
-            var second = Score(Second);
-            return first == second ? null : first > second ? First : Second;
-        }
+        ValidatePlayer(player);
+        return ReferenceEquals(player, First) ? FirstRoundsWon : SecondRoundsWon;
     }
 
     public void AddToDeck(Player player, Card card)
     {
         ValidatePlayer(player);
         ArgumentNullException.ThrowIfNull(card);
-        if (card.Zone != CardZone.Unassigned)
-            throw new InvalidOperationException("Only an unassigned card instance can be added to a deck.");
+        if (card.Zone != CardZone.Unassigned) throw new InvalidOperationException("Only an unassigned card instance can be added to a deck.");
         card.Assign(player, _id);
         player.AddToDeck(card);
     }
 
     public Card? Draw(Player player)
     {
-        ValidatePlayer(player);
+        ValidateActivePlayer(player);
         return player.DrawTopCard();
     }
 
     public void Play(Player player, Card card)
     {
-        ValidatePlayer(player);
+        ValidateActivePlayer(player);
         ArgumentNullException.ThrowIfNull(card);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Hand ||
             !player.Hand.Any(existing => existing.InstanceId == card.InstanceId))
-            throw new InvalidOperationException("Only a card in the player's hand can be played.");
+            throw new InvalidOperationException("Only a card in the active player's hand can be played.");
         player.PlayFromHand(card);
     }
 
     public void Destroy(Player player, Card card)
     {
-        ValidatePlayer(player);
+        ValidateActivePlayer(player);
         ArgumentNullException.ThrowIfNull(card);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
             !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
-            throw new InvalidOperationException("Only a card on the player's field can be moved to the graveyard.");
+            throw new InvalidOperationException("Only a card on the active player's field can be destroyed.");
         player.MoveToGraveyard(card);
+    }
+
+    public void EndTurn()
+    {
+        EnsureNotFinished();
+        var other = Other(CurrentPlayer);
+        if (!_passedPlayers.Contains(other)) CurrentPlayer = other;
+    }
+
+    public void Pass(Player player)
+    {
+        ValidateActivePlayer(player);
+        _passedPlayers.Add(player);
+        var other = Other(player);
+        if (_passedPlayers.Contains(other))
+        {
+            ResolveRound();
+            return;
+        }
+        CurrentPlayer = other;
     }
 
     public static int Score(Player player)
@@ -263,10 +268,61 @@ public sealed class Game
         return player.Board.Score(row);
     }
 
+    private void ResolveRound()
+    {
+        var firstScore = Score(First);
+        var secondScore = Score(Second);
+        if (firstScore > secondScore)
+        {
+            FirstRoundsWon++;
+            LastRoundWinner = First;
+            _roundStarter = Second;
+        }
+        else if (secondScore > firstScore)
+        {
+            SecondRoundsWon++;
+            LastRoundWinner = Second;
+            _roundStarter = First;
+        }
+        else
+        {
+            FirstRoundsWon++;
+            SecondRoundsWon++;
+            LastRoundWinner = null;
+            _roundStarter = ReferenceEquals(_roundStarter, First) ? Second : First;
+        }
+
+        First.ClearFieldToGraveyard();
+        Second.ClearFieldToGraveyard();
+        _passedPlayers.Clear();
+
+        IsFinished = FirstRoundsWon >= 2 || SecondRoundsWon >= 2 || RoundNumber >= 3;
+        if (!IsFinished)
+        {
+            RoundNumber++;
+            CurrentPlayer = _roundStarter;
+        }
+    }
+
+    private Player Other(Player player) => ReferenceEquals(player, First) ? Second : First;
+
+    private void ValidateActivePlayer(Player player)
+    {
+        ValidatePlayer(player);
+        EnsureNotFinished();
+        if (!ReferenceEquals(player, CurrentPlayer)) throw new InvalidOperationException("It is not this player's turn.");
+        if (_passedPlayers.Contains(player)) throw new InvalidOperationException("A player who passed cannot act again this round.");
+    }
+
     private void ValidatePlayer(Player player)
     {
         ArgumentNullException.ThrowIfNull(player);
         if (!ReferenceEquals(player, First) && !ReferenceEquals(player, Second))
             throw new InvalidOperationException("Player does not belong to this game.");
+    }
+
+    private void EnsureNotFinished()
+    {
+        if (IsFinished) throw new InvalidOperationException("The game has already finished.");
     }
 }
