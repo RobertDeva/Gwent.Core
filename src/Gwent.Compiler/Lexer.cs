@@ -29,7 +29,7 @@ public sealed class Lexer
     private void ReadIdentifier()
     {
         var line = _line; var column = _column; var start = _position;
-        while (!AtEnd && (char.IsLetterOrDigit(Current) || Current == '_')) Advance();
+        while (!AtEnd && (char.IsLetterOrDigit(Current) || Current == '_' || Current == '-')) Advance();
         _tokens.Add(new(TokenKind.Identifier, _source[start.._position], line, column));
     }
     private void ReadInteger()

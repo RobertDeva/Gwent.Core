@@ -17,6 +17,12 @@ public sealed class SemanticAnalyzer
 
         foreach (var declaration in syntax.Declarations.OfType<EffectDeclarationSyntax>())
         {
+            if (!IsValidIdentifier(declaration.Id))
+            {
+                diagnostics.Add(new Diagnostic(declaration.Line, $"Invalid effect identifier '{declaration.Id}'."));
+                continue;
+            }
+
             if (!TryParseNonNegativeInteger(declaration.Amount, out var amount))
             {
                 diagnostics.Add(new Diagnostic(declaration.Line,
@@ -59,6 +65,12 @@ public sealed class SemanticAnalyzer
 
         foreach (var declaration in syntax.Declarations.OfType<CardDeclarationSyntax>())
         {
+            if (!IsValidIdentifier(declaration.Id))
+            {
+                diagnostics.Add(new Diagnostic(declaration.Line, $"Invalid card identifier '{declaration.Id}'."));
+                continue;
+            }
+
             if (cards.ContainsKey(declaration.Id))
             {
                 diagnostics.Add(new Diagnostic(declaration.Line, $"Duplicate card id '{declaration.Id}'."));
@@ -94,6 +106,12 @@ public sealed class SemanticAnalyzer
                 new Dictionary<string, CompiledEffect>(), diagnostics.AsReadOnly());
 
         return new CompilationResult(cards, effects, diagnostics.AsReadOnly());
+    }
+
+    private static bool IsValidIdentifier(string value)
+    {
+        if (string.IsNullOrEmpty(value) || !(char.IsLetter(value[0]) || value[0] == '_')) return false;
+        return value.Skip(1).All(character => char.IsLetterOrDigit(character) || character == '_');
     }
 
     private static bool TryParseNonNegativeInteger(string value, out int result) =>
