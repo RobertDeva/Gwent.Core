@@ -121,10 +121,8 @@ public sealed class RuntimeTypeAnalyzer
             return;
         }
 
-        var predicateVariables = CopyVariables(variables)
-        {
-            [lambda.ParameterName] = RuntimeType.Card
-        };
+        var predicateVariables = CopyVariables(variables);
+        predicateVariables[lambda.ParameterName] = RuntimeType.Card;
         var predicateType = Infer(lambda.Body, predicateVariables, effectId);
         if (predicateType != RuntimeType.Boolean && predicateType != RuntimeType.Unknown)
             Add($"Selector Predicate in effect '{effectId}' must return Boolean.");
