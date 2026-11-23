@@ -1,5 +1,5 @@
 namespace Gwent.Compiler;
-public enum TokenKind { Identifier, Integer, String, NewLine, EndOfFile }
+public enum TokenKind { Identifier, Integer, String, NewLine, Colon, Comma, Semicolon, OpenBrace, CloseBrace, OpenBracket, CloseBracket, OpenParen, CloseParen, Dot, Plus, Minus, Star, Slash, Percent, Caret, Assign, EqualEqual, BangEqual, Greater, GreaterEqual, Less, LessEqual, AndAnd, OrOr, Arrow, EndOfFile }
 public sealed record Token(TokenKind Kind, string Text, int Line, int Column);
 public abstract record DeclarationSyntax(int Line);
 public sealed record EffectDeclarationSyntax(int SourceLine, string Id, string Amount, string? Duration, string? Operation, string? Target) : DeclarationSyntax(SourceLine);

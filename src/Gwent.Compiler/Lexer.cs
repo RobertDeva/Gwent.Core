@@ -18,6 +18,7 @@ public sealed class Lexer
             if (char.IsLetter(c) || c == '_') { ReadIdentifier(); continue; }
             if (char.IsDigit(c)) { ReadInteger(); continue; }
             if (c == '"') { ReadString(); continue; }
+            if (ReadSymbol()) continue;
             _diagnostics.Add(new Diagnostic(_line, $"Unexpected character '{c}'.", _column));
             Advance();
         }
@@ -60,6 +61,52 @@ public sealed class Lexer
         Advance();
         _tokens.Add(new(TokenKind.String, value.ToString(), line, column));
     }
+    private bool ReadSymbol()
+    {
+        var line = _line;
+        var column = _column;
+        var first = Current;
+        var second = _position + 1 < _source.Length ? _source[_position + 1] : '\\0';
+        TokenKind? kind = first switch
+        {
+            ':' => TokenKind.Colon,
+            ',' => TokenKind.Comma,
+            ';' => TokenKind.Semicolon,
+            '{' => TokenKind.OpenBrace,
+            '}' => TokenKind.CloseBrace,
+            '[' => TokenKind.OpenBracket,
+            ']' => TokenKind.CloseBracket,
+            '(' => TokenKind.OpenParen,
+            ')' => TokenKind.CloseParen,
+            '.' => TokenKind.Dot,
+            '+' => TokenKind.Plus,
+            '-' when second != '>' => TokenKind.Minus,
+            '*' => TokenKind.Star,
+            '/' => TokenKind.Slash,
+            '%' => TokenKind.Percent,
+            '^' => TokenKind.Caret,
+            '=' when second == '>' => TokenKind.Arrow,
+            '=' when second == '=' => TokenKind.EqualEqual,
+            '=' => TokenKind.Assign,
+            '!' when second == '=' => TokenKind.BangEqual,
+            '>' when second == '=' => TokenKind.GreaterEqual,
+            '>' => TokenKind.Greater,
+            '<' when second == '=' => TokenKind.LessEqual,
+            '<' => TokenKind.Less,
+            '&' when second == '&' => TokenKind.AndAnd,
+            '|' when second == '|' => TokenKind.OrOr,
+            _ => null
+        };
+        if (kind is null) return false;
+
+        var length = kind is TokenKind.Arrow or TokenKind.EqualEqual or TokenKind.BangEqual or
+            TokenKind.GreaterEqual or TokenKind.LessEqual or TokenKind.AndAnd or TokenKind.OrOr ? 2 : 1;
+        var text = _source.Substring(_position, length);
+        for (var i = 0; i < length; i++) Advance();
+        _tokens.Add(new Token(kind.Value, text, line, column));
+        return true;
+    }
+
     private void Advance() { _position++; _column++; }
     private void AdvanceLine() { _position++; _line++; _column = 1; }
 }
