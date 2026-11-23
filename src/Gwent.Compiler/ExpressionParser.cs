@@ -118,13 +118,8 @@ public sealed class ExpressionParser
                     var arguments = ParseArguments();
                     expression = new CollectionMethodExpression(expression, name, arguments);
                 }
-                else if (Enum.TryParse<CardProperty>(name, true, out var property))
-                    expression = new CardPropertyExpression(expression, property);
                 else
-                {
-                    Error(Previous, $"Unknown card property '{name}'.");
-                    return expression;
-                }
+                    expression = new RuntimeMemberExpression(expression, name);
                 continue;
             }
 

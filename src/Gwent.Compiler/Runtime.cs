@@ -10,7 +10,10 @@ public enum RuntimeValueKind
     String,
     Card,
     CardCollection,
-    Lambda
+    Lambda,
+    Player,
+    Game,
+    ExecutionContext
 }
 
 /// <summary>A closed, typed value representation used by the effect interpreter.</summary>
@@ -40,6 +43,12 @@ public sealed class RuntimeValue
     }
     public static RuntimeValue From(RuntimeLambda value) =>
         new(RuntimeValueKind.Lambda, value ?? throw new ArgumentNullException(nameof(value)));
+    public static RuntimeValue From(Player value) =>
+        new(RuntimeValueKind.Player, value ?? throw new ArgumentNullException(nameof(value)));
+    public static RuntimeValue From(Game value) =>
+        new(RuntimeValueKind.Game, value ?? throw new ArgumentNullException(nameof(value)));
+    public static RuntimeValue From(RuntimeExecutionContext value) =>
+        new(RuntimeValueKind.ExecutionContext, value ?? throw new ArgumentNullException(nameof(value)));
 
     public bool AsBoolean() => Kind == RuntimeValueKind.Boolean
         ? (bool)Value!
@@ -64,6 +73,15 @@ public sealed class RuntimeValue
     public RuntimeLambda AsLambda() => Kind == RuntimeValueKind.Lambda
         ? (RuntimeLambda)Value!
         : throw TypeError(RuntimeValueKind.Lambda);
+    public Player AsPlayer() => Kind == RuntimeValueKind.Player
+        ? (Player)Value!
+        : throw TypeError(RuntimeValueKind.Player);
+    public Game AsGame() => Kind == RuntimeValueKind.Game
+        ? (Game)Value!
+        : throw TypeError(RuntimeValueKind.Game);
+    public RuntimeExecutionContext AsContext() => Kind == RuntimeValueKind.ExecutionContext
+        ? (RuntimeExecutionContext)Value!
+        : throw TypeError(RuntimeValueKind.ExecutionContext);
 
     private InvalidOperationException TypeError(RuntimeValueKind expected) =>
         new($"Expected runtime value '{expected}', but received '{Kind}'.");
