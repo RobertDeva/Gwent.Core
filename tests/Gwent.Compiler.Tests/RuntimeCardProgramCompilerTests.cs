@@ -102,6 +102,64 @@ public sealed class RuntimeCardProgramCompilerTests
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("non-empty Rank", StringComparison.Ordinal));
     }
 
+
+    [Fact]
+    public void RuntimeCardProgramRejectsMismatchedCatalogKeys()
+    {
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", []);
+        var effects = new RuntimeEffectCatalog([]);
+
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeCardProgram(effects,
+                new Dictionary<string, RuntimeCardDefinition> { ["other"] = definition }));
+    }
+
+    [Fact]
+    public void ActivationRequiresTheOwnedCardToBeOnTheField()
+    {
+        var player = new Gwent.Engine.Player("p1");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("p2"));
+        var card = new Gwent.Engine.Card("unit", "Unit", 1, Gwent.Engine.Row.Melee);
+        game.AddToDeck(player, card);
+        var invocation = new RuntimeEffectInvocation(
+            "noop", new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector("field", new LiteralExpression(RuntimeValue.From(false))));
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", [invocation]);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([new RuntimeEffectDefinition("noop", [], [])]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+        var context = new RuntimeExecutionContext(player, card, game);
+
+        Assert.Throws<InvalidOperationException>(() => program.Activate(card, 0, context));
+    }
+
+    [Fact]
+    public void ActivationRejectsATriggerPlayerWhoDoesNotOwnTheCard()
+    {
+        var first = new Gwent.Engine.Player("p1");
+        var second = new Gwent.Engine.Player("p2");
+        var game = new Gwent.Engine.Game(first, second);
+        var card = new Gwent.Engine.Card("unit", "Unit", 1, Gwent.Engine.Row.Melee);
+        game.AddToDeck(second, card);
+        game.MoveCard(card, second, Gwent.Engine.CardZone.Field);
+        var invocation = new RuntimeEffectInvocation(
+            "noop", new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector("field", new LiteralExpression(RuntimeValue.From(false))));
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", [invocation]);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([new RuntimeEffectDefinition("noop", [], [])]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+        var context = new RuntimeExecutionContext(first, card, game);
+
+        Assert.Throws<ArgumentException>(() => program.Activate(card, 0, context));
+    }
+
     [Fact]
     public void RejectsCardActivationReferencingUnknownEffect()
     {

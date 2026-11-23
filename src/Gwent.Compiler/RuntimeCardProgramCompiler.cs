@@ -9,8 +9,22 @@ public sealed class RuntimeCardProgram
         IReadOnlyDictionary<string, RuntimeCardDefinition> cards)
     {
         Effects = effects ?? throw new ArgumentNullException(nameof(effects));
-        Cards = new ReadOnlyDictionary<string, RuntimeCardDefinition>(
-            cards.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
+        ArgumentNullException.ThrowIfNull(cards);
+
+        var catalog = new Dictionary<string, RuntimeCardDefinition>(StringComparer.Ordinal);
+        foreach (var pair in cards)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                throw new ArgumentException("Card definition keys cannot be empty.", nameof(cards));
+            if (pair.Value is null)
+                throw new ArgumentException($"Card definition '{pair.Key}' cannot be null.", nameof(cards));
+            if (!StringComparer.Ordinal.Equals(pair.Key, pair.Value.Id))
+                throw new ArgumentException(
+                    $"Card catalog key '{pair.Key}' does not match definition id '{pair.Value.Id}'.",
+                    nameof(cards));
+            catalog.Add(pair.Key, pair.Value);
+        }
+        Cards = new ReadOnlyDictionary<string, RuntimeCardDefinition>(catalog);
     }
 
     public RuntimeEffectCatalog Effects { get; }
@@ -32,6 +46,10 @@ public sealed class RuntimeCardProgram
         ArgumentNullException.ThrowIfNull(context);
         if (!ReferenceEquals(context.SourceCard, card))
             throw new ArgumentException("Execution context source card does not match the activation card.", nameof(context));
+        if (card.Zone != Gwent.Engine.CardZone.Field)
+            throw new InvalidOperationException("Only a card on the field can activate its effects.");
+        if (!StringComparer.Ordinal.Equals(card.OwnerId, context.TriggerPlayer.Id))
+            throw new ArgumentException("The trigger player must own the activation card.", nameof(context));
         if (!Cards.TryGetValue(card.DefinitionId, out var definition))
             throw new KeyNotFoundException($"Card definition '{card.DefinitionId}' is not declared.");
         if (activationIndex < 0 || activationIndex >= definition.Activations.Count)
