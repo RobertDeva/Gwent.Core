@@ -9,7 +9,8 @@ public enum RuntimeValueKind
     Number,
     String,
     Card,
-    CardCollection
+    CardCollection,
+    Lambda
 }
 
 /// <summary>A closed, typed value representation used by the effect interpreter.</summary>
@@ -37,6 +38,8 @@ public sealed class RuntimeValue
         return new RuntimeValue(RuntimeValueKind.CardCollection,
             Array.AsReadOnly(value.ToArray()));
     }
+    public static RuntimeValue From(RuntimeLambda value) =>
+        new(RuntimeValueKind.Lambda, value ?? throw new ArgumentNullException(nameof(value)));
 
     public bool AsBoolean() => Kind == RuntimeValueKind.Boolean
         ? (bool)Value!
@@ -57,6 +60,10 @@ public sealed class RuntimeValue
     public IReadOnlyList<Card> AsCards() => Kind == RuntimeValueKind.CardCollection
         ? (IReadOnlyList<Card>)Value!
         : throw TypeError(RuntimeValueKind.CardCollection);
+
+    public RuntimeLambda AsLambda() => Kind == RuntimeValueKind.Lambda
+        ? (RuntimeLambda)Value!
+        : throw TypeError(RuntimeValueKind.Lambda);
 
     private InvalidOperationException TypeError(RuntimeValueKind expected) =>
         new($"Expected runtime value '{expected}', but received '{Kind}'.");

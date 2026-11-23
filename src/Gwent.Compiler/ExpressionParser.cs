@@ -65,6 +65,16 @@ public sealed class ExpressionParser
                     return new LiteralExpression(RuntimeValue.From(false));
                 return new VariableExpression(token.Text);
             case TokenKind.OpenParen:
+                if (Current.Kind == TokenKind.Identifier &&
+                    Peek(1).Kind == TokenKind.CloseParen &&
+                    Peek(2).Kind == TokenKind.Arrow)
+                {
+                    var parameter = Advance().Text;
+                    Advance();
+                    Advance();
+                    var body = ParseExpression();
+                    return body is null ? null : new LambdaExpression(parameter, body);
+                }
                 var nested = ParseExpression();
                 if (!Match(TokenKind.CloseParen)) Error(Current, "Expected ')' to close expression.");
                 return nested;
@@ -160,6 +170,7 @@ public sealed class ExpressionParser
     }
 
     private Token Current => _tokens[Math.Min(_position, _tokens.Count - 1)];
+    private Token Peek(int offset) => _tokens[Math.Min(_position + offset, _tokens.Count - 1)];
     private Token Previous => _tokens[Math.Max(0, _position - 1)];
     private Token Advance()
     {
