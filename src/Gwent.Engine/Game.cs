@@ -317,6 +317,7 @@ public sealed class Game
             !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
             throw new InvalidOperationException("Only a card on the active player's field can be destroyed.");
         DeactivateEffectsFrom(card);
+        card.RemovePersistentModifiers();
         player.MoveToGraveyard(card);
         RefreshPersistentEffects();
     }

@@ -298,4 +298,31 @@ public sealed class GameTests
         Assert.Equal(5, unit.Power);
     }
 
+
+    [Fact]
+    public void LeavingTheFieldRemovesIncomingPersistentModifiersFromTheCard()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var weather = new Card("weather", "Weather", 0, Row.Melee, "frost");
+        var unit = new Card("unit", "Unit", 5, Row.Melee);
+        game.AddToDeck(first, weather);
+        game.AddToDeck(second, unit);
+        game.Draw(first);
+        game.Play(first, weather);
+        game.ApplyEffect(first, weather, new CardEffect(
+            "frost", 1, EffectDuration.WhileSourceOnField,
+            EffectOperation.Set, EffectTargetScope.BothPlayersInRow));
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, unit);
+        Assert.Equal(1, unit.Power);
+
+        game.Destroy(second, unit);
+
+        Assert.Equal(CardZone.Graveyard, unit.Zone);
+        Assert.Equal(5, unit.Power);
+    }
+
 }
