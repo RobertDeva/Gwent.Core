@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Library</OutputType></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Gwent.Engine/Gwent.Engine.csproj" /></ItemGroup>
+</Project>

@@ -1,0 +1,4 @@
+# A minimal Gwent.Core DSL program
+effect rally boost 2
+card vanguard "Northern Vanguard" power 4 row melee effect rally
+card archer "Frontier Archer" power 3 row ranged
