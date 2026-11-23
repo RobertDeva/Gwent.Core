@@ -32,7 +32,7 @@ public sealed class RuntimeContextMemberTests
     {
         var first = new Player("p1");
         var game = new Game(first, new Player("p2"));
-        var definition = new CardDefinition(
+        var definition = new Gwent.Engine.CardDefinition(
             "unit", "Unit", 4, "Northern", "Unit", "Silver",
             [Row.Melee, Row.Ranged], "A unit");
         var card = definition.CreateInstance(Row.Melee);
