@@ -69,7 +69,6 @@ public sealed class RuntimeTests
     [Fact]
     public void CardCollectionsAreDefensiveSnapshots()
     {
-        var player = new Gwent.Engine.Player("p1");
         var card = new Gwent.Engine.Card("unit", "Unit", 3, Gwent.Engine.Row.Melee);
         var cards = new[] { card };
         var value = RuntimeValue.FromCards(cards);
