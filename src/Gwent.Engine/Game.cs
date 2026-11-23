@@ -259,6 +259,8 @@ public sealed class Game
         First = first ?? throw new ArgumentNullException(nameof(first));
         Second = second ?? throw new ArgumentNullException(nameof(second));
         if (ReferenceEquals(first, second)) throw new ArgumentException("A game requires two distinct players.");
+        if (StringComparer.Ordinal.Equals(first.Id, second.Id))
+            throw new ArgumentException("Player IDs must be unique within a game.");
         _roundStarter = First;
         CurrentPlayer = First;
     }

@@ -10,6 +10,7 @@ Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity rem
 
 - Card definitions produce independent physical instances.
 - Each instance belongs to one game, one owner, and one zone.
+- Player IDs are unique within a game because ownership and effect-source resolution use those IDs.
 - Game validates every zone transition and active-player operation.
 - The field is divided into Melee, Ranged, and Siege rows; scores are derived from board contents.
 - Passing ends a player's participation in the current round. Both players must pass to resolve it.

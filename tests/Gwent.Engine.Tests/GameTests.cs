@@ -28,6 +28,15 @@ public sealed class GameTests
     }
 
     [Fact]
+    public void GameRejectsPlayersWithDuplicateIds()
+    {
+        var first = new Player("same-id");
+        var second = new Player("same-id");
+
+        Assert.Throws<ArgumentException>(() => new Game(first, second));
+    }
+
+    [Fact]
     public void DrawReturnsNullWhenDeckIsEmpty()
     {
         var player = new Player("first");
