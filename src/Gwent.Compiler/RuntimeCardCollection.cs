@@ -29,7 +29,7 @@ public sealed class RuntimeCardCollection
         _context = context;
         _owner = owner;
         _zone = zone;
-        _cards = ReadZone().ToList();
+        _cards = [];
         _view = _cards.AsReadOnly();
     }
 
@@ -68,7 +68,6 @@ public sealed class RuntimeCardCollection
         }
         else
             _cards.Add(card);
-        Refresh();
     }
 
     public void Push(Card card)
@@ -162,13 +161,6 @@ public sealed class RuntimeCardCollection
         CardZone.Graveyard => _owner!.Graveyard,
         _ => throw new ArgumentOutOfRangeException(nameof(_zone))
     };
-
-    private void Refresh()
-    {
-        if (!IsZoneBound) return;
-        _cards.Clear();
-        _cards.AddRange(ReadZone());
-    }
 
     private void EnsureMutable()
     {
