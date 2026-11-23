@@ -120,7 +120,7 @@ public sealed class CompilerTests
     [Fact]
     public void ParserRecoversAfterUnterminatedStringOnPreviousLine()
     {
-        var tokens = new Lexer("card broken \"Broken\\ncard valid \"Valid\" power 3 row melee").Tokenize();
+        var tokens = new Lexer("card broken \"Broken\ncard valid \"Valid\" power 3 row melee").Tokenize();
         var syntax = new Parser(tokens).Parse();
 
         Assert.NotEmpty(syntax.Diagnostics);
