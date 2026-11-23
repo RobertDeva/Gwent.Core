@@ -20,26 +20,22 @@ var opponent = new Player("Player 2");
 var game = new Game(human, opponent);
 
 foreach (var definition in compilation.Cards.Values)
-{
-    var card = definition.CreateCard();
-    game.AddToDeck(human, card);
-}
+    game.AddToDeck(human, definition.CreateCard());
 
 while (game.Draw(human) is { } card)
 {
     game.Play(human, card);
-
     if (card.EffectId is not null)
     {
         var effect = compilation.Effects[card.EffectId];
         card.IncreasePower(effect.PowerIncrease);
     }
-
     Console.WriteLine($"{card.Name,-22} {card.Row,-7} {card.Power,2} power");
 }
 
-var score = Game.Score(human);
-Console.WriteLine($"\n{human.Id}: {score}");
+Console.WriteLine($"\n{human.Id}: {Game.Score(human)}");
+foreach (var row in Enum.GetValues<Row>())
+    Console.WriteLine($"  {row,-7} {Game.Score(human, row),2}");
 Console.WriteLine($"{opponent.Id}: {Game.Score(opponent)}");
 Console.WriteLine(game.Winner is null ? "Result: draw" : $"Winner: {game.Winner.Id}");
 return 0;

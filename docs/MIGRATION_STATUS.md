@@ -1,21 +1,22 @@
-# Estado de migración
+# Migration status
 
-## Recuperación de fuentes
+## Implemented
 
-Se inspeccionó el árbol del repositorio histórico y se identificaron 117 archivos relevantes entre C#, configuración Unity y documentación. El proyecto original usa Unity 2022.3.22f1. La lógica de dominio y el compilador están mezclados con referencias a Unity y estado estático; no se copian directamente.
+- .NET 10 solution with Engine, Compiler, Console, and three test projects.
+- Reusable card definitions and independent card instances.
+- Deck, hand, row-based field, and graveyard zones.
+- Validated transitions: add to deck, draw, play, destroy.
+- Melee, Ranged, and Siege board rows with row and total scoring.
+- Initial DSL compiler for card and boost-effect declarations.
+- Console sample that compiles a DSL file, creates a deck, draws and plays cards, and displays row scores.
 
-## Primera rebanada implementada
+## Next milestones
 
-- Solución .NET 10 con Engine, Compiler, Console y tres proyectos de pruebas.
-- Motor mínimo con instancias aisladas de partida, jugadores, definiciones de cartas representadas por identificadores y copias físicas independientes, movimiento al campo y puntuación.
-- Cada copia recibe un `InstanceId` propio y conserva el `DefinitionId` de su plantilla. Repetir una definición no implica repetir una instancia.
-- Compilador DSL inicial para declaraciones de cartas y efectos de aumento de potencia.
-- Ejecución del efecto compilado sobre una carta que ya pertenece a una partida.
-- Consola capaz de cargar un archivo DSL y mostrar puntuaciones y ganador.
-- Pruebas unitarias y de integración para los contratos principales.
+- Turn order, passing, round resolution, and match victory points.
+- Engine-owned effect execution with explicit context.
+- Expanded DSL syntax, selectors, predicates, and effect instruction model.
+- A player-driven console match and complete acceptance scenario.
 
-## Limitaciones pendientes
+## Historical migration
 
-- La DSL v1 no implementa aún selectores, predicados, scopes, loops, post-actions ni operaciones de colecciones.
-- No hay mazos, mano, cementerio, rondas ni reglas completas de Gwent en esta primera rebanada.
-- No se ha ejecutado build ni tests en este entorno porque no dispone del SDK de .NET. GitHub Actions valida los cambios mediante build y pruebas remotas.
+The historical Unity project is treated as a source of domain and language ideas, not copied wholesale. Its Unity coupling and static mutable state are not carried into this core.

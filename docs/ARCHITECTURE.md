@@ -1,59 +1,41 @@
 # Architecture
 
-## Goals
-
-Gwent.Core is a framework-independent implementation of the game's domain, rules, and card/effect language. Unity, if reintroduced later, must remain an outer presentation adapter and must not be referenced by the core projects.
+Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity remains an outer presentation adapter and is not referenced by Engine, Compiler, or Console.
 
 ## Dependency direction
 
 ```text
-Gwent.Console ───────┐
-                     ├──> Gwent.Compiler ───> Gwent.Engine
-Gwent.Tests ─────────┘                    └──> Gwent.Engine
+Gwent.Console -> Gwent.Compiler -> Gwent.Engine
+       |________________________> Gwent.Engine
 ```
 
-The compiler translates source text into validated definitions and effect data. The engine owns game state and enforces all game rules. The console coordinates user input and renders results; it contains no game rules.
+- Engine owns game state, zones, board rows, scoring, turn/round rules, and effect execution.
+- Compiler translates DSL source into validated card and effect definitions.
+- Console loads source and coordinates player commands; it does not implement game rules.
 
-## Projects
+## Domain invariants
 
-- `src/Gwent.Engine`: domain entities, board/zones, players, decks, turns, rounds, scoring, and effect contracts.
-- `src/Gwent.Compiler`: lexer, parser, syntax tree, semantic analysis, diagnostics, and DSL-to-engine binding.
-- `src/Gwent.Console`: command-line application and sample game workflow.
-- `tests/Gwent.Engine.Tests`: isolated domain and rule tests.
-- `tests/Gwent.Compiler.Tests`: lexer, parser, semantic and interpreter tests.
-- `tests/Gwent.IntegrationTests`: end-to-end compiler-to-game scenarios.
+- Every card definition can produce multiple independent card instances.
+- A card instance belongs to one game, one owner, and exactly one zone.
+- Legal zone transitions are controlled by Game; external callers receive read-only zone views.
+- A player's field is divided into Melee, Ranged, and Siege rows.
+- Row score and total score are derived from the current board; no duplicate score state is stored.
+- Turns, passes, round resolution, and victory points are owned by Game.
+- Effect execution is performed by Engine through explicit game/player/card context.
+- Compiler errors do not publish partial catalogs and compilation state is per invocation.
 
-## Core invariants
+## Current runtime flow
 
-- Every match owns its own board and zones; no mutable match state is static.
-- A card definition describes a reusable template; each physical copy is a distinct card instance with its own identity and mutable state.
-- Multiple instances of the same definition may coexist in the same zone when game rules permit.
-- A card instance belongs to exactly one zone at a time.
-- Zone moves validate source membership, destination capacity, ownership, and nullability before mutation.
-- Score is derived from current board state through one authoritative calculation path.
-- Compiler diagnostics are scoped to one compilation; no mutable static error or execution state.
-- Invalid source must fail with diagnostics, not partially register definitions.
-- DSL effects operate through explicit engine-facing context and constrained capabilities, not global state or reflection-based scene lookup.
+1. Compile DSL declarations into card/effect catalogues.
+2. Create independent card instances and add them to player decks.
+3. Draw and play cards through Game operations.
+4. Resolve rounds through explicit turn/pass operations.
+5. Apply compiled effects through Game's engine-facing effect API.
+6. Derive row/total scores and match winner from authoritative state.
 
-## Runtime flow
+## Engineering constraints
 
-1. Console loads a DSL source file.
-2. Compiler tokenizes and parses it into a syntax representation.
-3. Semantic analysis validates declarations, references, types, and effect operations.
-4. Successful compilation returns an immutable definition catalog plus diagnostics.
-5. Console constructs players, decks, and a match using that catalog.
-6. Player commands invoke engine operations; compiled effects execute through an explicit effect context.
-7. Console displays the resulting state and score.
-
-## Engineering decisions
-
-- Target framework: .NET 10 (`net10.0`), independent of Unity's runtime profile.
-- Nullable reference types and implicit usings are enabled centrally.
-- Warnings are treated as errors; analyzer/style level is set centrally.
-- Prefer composition and explicit interfaces over inheritance-heavy card hierarchies.
-- Add abstractions only where they protect a domain boundary or support a real use case.
-- Keep public APIs small and validate invariants at domain boundaries.
-
-## Testing strategy
-
-Unit tests cover domain invariants and compiler stages. Integration tests compile a representative DSL file, instantiate a match, execute effects, and assert observable state and scores. Console smoke tests verify a complete playable scenario. CI must build and run all tests on every pull request.
+- .NET 10, nullable references, implicit usings, warnings as errors.
+- No Unity dependency in core projects.
+- Prefer small explicit APIs, composition, immutable definitions, and observable domain operations.
+- Tests cover invariants at unit and compiler-to-engine integration boundaries.
