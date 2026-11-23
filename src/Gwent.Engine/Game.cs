@@ -164,11 +164,7 @@ public sealed class Player
         return card;
     }
 
-    internal void AddToDeck(Card card)
-    {
-        card.Assign(this, Guid.Empty);
-        _deck.Add(card);
-    }
+    internal void AddToDeck(Card card) => _deck.Add(card);
 
     internal void PlayFromHand(Card card)
     {
