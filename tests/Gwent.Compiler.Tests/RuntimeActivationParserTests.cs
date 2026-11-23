@@ -49,6 +49,20 @@ public sealed class RuntimeActivationParserTests
         Assert.Equal("parent", result.Activations[0].PostAction!.Selector.Source);
     }
 
+
+    [Fact]
+    public void RejectsDuplicateActivationAndSelectorFields()
+    {
+        var result = new RuntimeActivationParser(
+            """OnActivation: [{ Type: "rally", Type: "follow-up", Selector: { Source: "field"; Source: "board"; } }]""").Parse();
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Activation field 'Type'", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Activation field 'Source'", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void RejectsDuplicateParameterAssignments()
     {

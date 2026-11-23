@@ -93,6 +93,7 @@ public sealed class RuntimeCardParser
         string? description = null;
         var ranges = new List<string>();
         IReadOnlyList<RuntimeEffectInvocation> activations = [];
+        var seenFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         while (Current.Kind is not (TokenKind.CloseBrace or TokenKind.EndOfFile))
         {
@@ -100,49 +101,50 @@ public sealed class RuntimeCardParser
 
             if (IsIdentifier("Name"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Name");
                 Expect(TokenKind.Colon, "':' after Name");
                 if (Expect(TokenKind.String, "quoted card name")) name = Previous.Text;
             }
             else if (IsIdentifier("Power"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Power");
                 Expect(TokenKind.Colon, "':' after Power");
                 power = ParseExpressionUntil(TokenKind.Semicolon);
                 if (power is null) break;
             }
             else if (IsIdentifier("Faction"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Faction");
                 Expect(TokenKind.Colon, "':' after Faction");
                 faction = ParseTextOrIdentifier("faction");
             }
             else if (IsIdentifier("Type"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Type");
                 Expect(TokenKind.Colon, "':' after Type");
                 type = ParseTextOrIdentifier("card type");
             }
             else if (IsIdentifier("Rank"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Rank");
                 Expect(TokenKind.Colon, "':' after Rank");
                 rank = ParseTextOrIdentifier("card rank");
             }
             else if (IsIdentifier("Range"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Range");
                 Expect(TokenKind.Colon, "':' after Range");
                 ParseRanges(ranges);
             }
             else if (IsIdentifier("description"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "description");
                 Expect(TokenKind.Colon, "':' after description");
                 if (Expect(TokenKind.String, "quoted card description")) description = Previous.Text;
             }
             else if (IsIdentifier("OnActivation"))
             {
+                MarkField(seenFields, Current, "OnActivation");
                 var activationTokens = ExtractActivationTokens();
                 var activationParser = new RuntimeActivationParser(activationTokens);
                 var result = activationParser.Parse();
@@ -174,6 +176,12 @@ public sealed class RuntimeCardParser
 
         return new RuntimeCardDefinition(id, name, power, faction, type, rank,
             Array.AsReadOnly(ranges.ToArray()), description, activations);
+    }
+
+    private void MarkField(HashSet<string> seenFields, Token token, string fieldName)
+    {
+        if (!seenFields.Add(fieldName))
+            Error(token, $"Card field '{fieldName}' is declared more than once.");
     }
 
     private string? ParseTextOrIdentifier(string description)

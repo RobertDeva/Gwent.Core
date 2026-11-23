@@ -89,9 +89,19 @@ public sealed class RuntimeCardProgramCompiler
             }
             diagnostics.AddRange(new RuntimeTypeAnalyzer()
                 .AnalyzeActivations(effectResult.Catalog, card.Activations));
+            var seenRanges = new HashSet<string>(StringComparer.Ordinal);
             foreach (var range in card.Ranges)
+            {
                 if (range is not ("Melee" or "Range" or "Ranged" or "Siege"))
+                {
                     diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' has unknown range '{range}'."));
+                    continue;
+                }
+
+                var normalizedRange = range == "Ranged" ? "Range" : range;
+                if (!seenRanges.Add(normalizedRange))
+                    diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' declares range '{range}' more than once."));
+            }
         }
 
         if (diagnostics.Count > 0)

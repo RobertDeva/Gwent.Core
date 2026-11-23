@@ -64,19 +64,20 @@ public sealed class RuntimeActivationParser
         RuntimeExpression single = new LiteralExpression(RuntimeValue.From(false));
         RuntimeExpression? predicate = null;
         RuntimeEffectInvocation? postAction = null;
+        var seenFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         while (Current.Kind is not (TokenKind.CloseBrace or TokenKind.EndOfFile))
         {
             if (Match(TokenKind.Comma) || Match(TokenKind.Semicolon)) continue;
             if (IsIdentifier("Type"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Type");
                 Expect(TokenKind.Colon, "':' after Type");
                 if (Expect(TokenKind.String, "quoted effect id")) effectId = Previous.Text;
             }
             else if (IsIdentifier("Params"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Params");
                 Expect(TokenKind.Colon, "':' after Params");
                 Expect(TokenKind.OpenBrace, "'{' before activation parameters");
                 ParseArguments(arguments);
@@ -84,7 +85,7 @@ public sealed class RuntimeActivationParser
             }
             else if (IsIdentifier("Selector"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Selector");
                 Expect(TokenKind.Colon, "':' after Selector");
                 Expect(TokenKind.OpenBrace, "'{' before Selector");
                 ParseSelector(ref source, ref single, ref predicate);
@@ -92,7 +93,7 @@ public sealed class RuntimeActivationParser
             }
             else if (IsIdentifier("PostAction"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "PostAction");
                 Expect(TokenKind.Colon, "':' after PostAction");
                 Expect(TokenKind.OpenBrace, "'{' before PostAction");
                 postAction = ParseInvocationBody(isPostAction: true);
@@ -114,6 +115,12 @@ public sealed class RuntimeActivationParser
 
         return new RuntimeEffectInvocation(effectId, arguments,
             new RuntimeSelector(source, single, predicate), postAction);
+    }
+
+    private void MarkField(HashSet<string> seenFields, Token token, string fieldName)
+    {
+        if (!seenFields.Add(fieldName))
+            Error(token, $"Activation field '{fieldName}' is declared more than once.");
     }
 
     private void ParseArguments(IDictionary<string, RuntimeExpression> arguments)
@@ -139,24 +146,25 @@ public sealed class RuntimeActivationParser
         ref RuntimeExpression single,
         ref RuntimeExpression? predicate)
     {
+        var seenFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (Current.Kind is not (TokenKind.CloseBrace or TokenKind.EndOfFile))
         {
             if (Match(TokenKind.Semicolon) || Match(TokenKind.Comma)) continue;
             if (IsIdentifier("Source"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Source");
                 Expect(TokenKind.Colon, "':' after Source");
                 if (Expect(TokenKind.String, "quoted selector source")) source = Previous.Text;
             }
             else if (IsIdentifier("Single"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Single");
                 Expect(TokenKind.Colon, "':' after Single");
                 single = ParseExpressionUntil(TokenKind.Semicolon, TokenKind.CloseBrace) ?? single;
             }
             else if (IsIdentifier("Predicate"))
             {
-                Advance();
+                MarkField(seenFields, Advance(), "Predicate");
                 Expect(TokenKind.Colon, "':' after Predicate");
                 if (IsIdentifier("null"))
                 {

@@ -48,6 +48,33 @@ public sealed class RuntimeCardProgramCompilerTests
         Assert.Single(card.Activations);
     }
 
+
+    [Fact]
+    public void RejectsDuplicateCardFieldsAndRanges()
+    {
+        var cards = """
+            card unit {
+                Name: "Unit";
+                Name: "Renamed";
+                Power: 1;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee", "Melee", "Range", "Ranged"];
+                description: "Unit";
+                OnActivation: [];
+            }
+            """;
+
+        var result = new RuntimeCardProgramCompiler().Compile(Effects, cards);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Card field 'Name'", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("declares range", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void RejectsCardActivationReferencingUnknownEffect()
     {
