@@ -114,6 +114,66 @@ public sealed class RuntimeZoneCollectionTests
 
 
 
+
+    [Fact]
+    public void ZoneBoundCollectionsReflectExternalZoneChanges()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var card = new Card("unit", "Unit", 1, Row.Melee);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        var hand = RuntimeCardCollection.ForZone(context, player, CardZone.Hand);
+
+        Assert.Empty(hand.Cards);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+
+        Assert.Equal(1, hand.Count);
+        Assert.Same(card, Assert.Single(hand.Cards));
+    }
+
+    [Fact]
+    public void RemoveIgnoresCardsThatAreNotInTheBoundZone()
+    {
+        var first = new Player("p1");
+        var second = new Player("p2");
+        var game = new Game(first, second);
+        var ownDeckCard = new Card("deck-card", "Deck card", 1, Row.Melee);
+        var opponentHandCard = new Card("opponent-card", "Opponent card", 1, Row.Melee);
+        game.AddToDeck(first, ownDeckCard);
+        game.AddToDeck(second, opponentHandCard);
+        game.EndTurn();
+        game.Draw(second);
+        var context = new RuntimeExecutionContext(first,
+            new Card("source", "Source", 1, Row.Melee), game);
+        var hand = RuntimeCardCollection.ForZone(context, first, CardZone.Hand);
+
+        hand.Remove(ownDeckCard);
+        hand.Remove(opponentHandCard);
+
+        Assert.Contains(ownDeckCard, first.Deck);
+        Assert.Contains(opponentHandCard, second.Hand);
+        Assert.Empty(first.Graveyard);
+    }
+
+    [Fact]
+    public void AddRejectsSameOwnerCardFromAnotherGame()
+    {
+        var firstGamePlayer = new Player("p1");
+        var firstGame = new Game(firstGamePlayer, new Player("p2"));
+        var secondGamePlayer = new Player("p1");
+        var secondGame = new Game(secondGamePlayer, new Player("p2"));
+        var foreignCard = new Card("unit", "Unit", 1, Row.Melee);
+        secondGame.AddToDeck(secondGamePlayer, foreignCard);
+        secondGame.Draw(secondGamePlayer);
+        var context = new RuntimeExecutionContext(firstGamePlayer,
+            new Card("source", "Source", 1, Row.Melee), firstGame);
+        var hand = RuntimeCardCollection.ForZone(context, firstGamePlayer, CardZone.Hand);
+
+        Assert.Throws<InvalidOperationException>(() => hand.Add(foreignCard));
+    }
+
     [Fact]
     public void AddDoesNotReorderExistingZoneCardsButPushDoes()
     {

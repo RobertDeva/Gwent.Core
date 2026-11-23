@@ -628,6 +628,13 @@ public sealed class Game
         player.ShuffleZone(zone, random);
     }
 
+    public bool ContainsCard(Card card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        return _cardsByInstance.TryGetValue(card.InstanceId, out var registered) &&
+               ReferenceEquals(registered, card);
+    }
+
     public void ValidateCardZones()
     {
         var cardsInZones = First.Deck.Concat(First.Hand).Concat(First.Field).Concat(First.Graveyard)

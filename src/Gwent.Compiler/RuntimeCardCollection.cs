@@ -40,8 +40,8 @@ public sealed class RuntimeCardCollection
         _readOnly = readOnly;
     }
 
-    public IReadOnlyList<Card> Cards => _view;
-    public int Count => _cards.Count;
+    public IReadOnlyList<Card> Cards => IsZoneBound ? ReadZone().ToArray() : _view;
+    public int Count => IsZoneBound ? ReadZone().Count() : _cards.Count;
 
     public static RuntimeCardCollection ForZone(
         RuntimeExecutionContext context, Player owner, CardZone zone)
@@ -63,6 +63,8 @@ public sealed class RuntimeCardCollection
         {
             if (card.Zone != _zone || !StringComparer.Ordinal.Equals(card.OwnerId, _owner!.Id))
                 _context!.Game!.MoveCard(card, _owner!, _zone!.Value, DeckPosition.Top);
+            else if (!_context!.Game!.ContainsCard(card))
+                throw new InvalidOperationException("Card instance does not belong to this game.");
         }
         else
             _cards.Add(card);
@@ -105,6 +107,10 @@ public sealed class RuntimeCardCollection
         ArgumentNullException.ThrowIfNull(card);
         if (IsZoneBound)
         {
+            if (card.Zone != _zone ||
+                !StringComparer.Ordinal.Equals(card.OwnerId, _owner!.Id))
+                return;
+
             var destination = _zone == CardZone.Graveyard
                 ? CardZone.Unassigned
                 : CardZone.Graveyard;
