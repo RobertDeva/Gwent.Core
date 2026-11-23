@@ -19,7 +19,7 @@ public sealed class CompilerTests
     }
     [Fact] public void LexerReportsUnsupportedCharactersAndUnterminatedStrings()
     {
-        var lexer=new Lexer("card @ \"broken"); lexer.Tokenize(); Assert.Equal(2,lexer.Diagnostics.Count);
+        var lexer=new Lexer("card ? \"broken"); lexer.Tokenize(); Assert.Equal(2,lexer.Diagnostics.Count);
     }
     [Fact] public void ParserBuildsTypedDeclarations()
     {
