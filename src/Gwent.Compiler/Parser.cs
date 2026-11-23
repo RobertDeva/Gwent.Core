@@ -33,7 +33,7 @@ public sealed class Parser
         if (!ExpectIdentifierText("boost") || !Expect(TokenKind.Integer, "non-negative integer after 'boost'")) return null;
         var amount = Previous.Text;
         string? duration = null, operation = null, target = null;
-        if (IsIdentifier("duration")) { Advance(); if (!ExpectOneOf(["instant", "while-source-on-field"], "effect duration")) return null; duration = Previous.Text; }
+        if (IsIdentifier("duration")) { Advance(); if (!ExpectOneOf(["instant", "while-source-on-field", "until-round-end"], "effect duration")) return null; duration = Previous.Text; }
         if (IsIdentifier("operation")) { Advance(); if (!ExpectOneOf(["add", "set", "multiply"], "effect operation")) return null; operation = Previous.Text; }
         if (IsIdentifier("target")) { Advance(); if (!ExpectOneOf(["source", "own-row", "both-players-in-row"], "effect target")) return null; target = Previous.Text; }
         if (!AtLineEnd) Error(Current, "Unexpected token after effect declaration.");
