@@ -24,9 +24,10 @@ public sealed class RuntimeEffectExecutorTests
             "rally",
             [new RuntimeParameterDefinition("amount", RuntimeParameterType.Number)],
             AllHand(),
-            [new DefineVariableStatement("result", new VariableExpression("amount"))]);
+            [new AssignVariableStatement("result", new VariableExpression("amount"))]);
         var executor = new RuntimeEffectExecutor(new RuntimeEffectCatalog([definition]));
         var context = Context();
+        context.Scope.Define("result", RuntimeValue.From(0));
 
         executor.Execute(new RuntimeEffectInvocation("rally",
             new Dictionary<string, RuntimeExpression>
@@ -68,6 +69,7 @@ public sealed class RuntimeEffectExecutorTests
     public void PostActionCanReceiveParentTargetsExplicitly()
     {
         var context = Context();
+        context.Scope.Define("childCount", RuntimeValue.From(0));
         var player = context.TriggerPlayer;
         var card = new Card("unit", "Unit", 3, Row.Melee);
         context.Game!.AddToDeck(player, card);
@@ -77,7 +79,7 @@ public sealed class RuntimeEffectExecutorTests
             "child",
             [],
             new RuntimeSelector("parent", new LiteralExpression(RuntimeValue.From(false))),
-            [new DefineVariableStatement("childCount",
+            [new AssignVariableStatement("childCount",
                 new LiteralExpression(RuntimeValue.From(1)))]);
         var parent = new RuntimeEffectDefinition(
             "parent",
