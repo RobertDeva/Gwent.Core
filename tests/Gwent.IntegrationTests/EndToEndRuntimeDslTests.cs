@@ -47,14 +47,13 @@ public sealed class EndToEndRuntimeDslTests
 
         var player = new Player("p1");
         var game = new Game(player, new Player("p2"));
-        var card = new Card("vanguard", "Vanguard", 4, Row.Melee);
+        var card = compiled.Program!.CreateCardInstance("vanguard", Row.Melee);
         game.AddToDeck(player, card);
         game.Draw(player);
         game.Play(player, card);
 
         var context = new RuntimeExecutionContext(player, card, game);
-        var invocation = compiled.Program!.Cards["vanguard"].Activations.Single();
-        new RuntimeEffectExecutor(compiled.Program.Effects).Execute(invocation, context);
+        compiled.Program.Activate(card, 0, context);
 
         Assert.Equal(6, card.Power);
         game.ValidateCardZones();

@@ -37,6 +37,56 @@ public sealed record CardEffect
     public EffectTargetScope TargetScope { get; }
 }
 
+public sealed class CardDefinition
+{
+    public CardDefinition(
+        string id,
+        string name,
+        int basePower,
+        string faction,
+        string type,
+        string rank,
+        IEnumerable<Row> allowedRows,
+        string description)
+    {
+        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Card definition id is required.", nameof(id));
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Card name is required.", nameof(name));
+        if (basePower < 0) throw new ArgumentOutOfRangeException(nameof(basePower));
+        if (string.IsNullOrWhiteSpace(faction)) throw new ArgumentException("Faction is required.", nameof(faction));
+        if (string.IsNullOrWhiteSpace(type)) throw new ArgumentException("Card type is required.", nameof(type));
+        if (string.IsNullOrWhiteSpace(rank)) throw new ArgumentException("Card rank is required.", nameof(rank));
+        ArgumentNullException.ThrowIfNull(allowedRows);
+        var rows = allowedRows.Distinct().ToArray();
+        if (rows.Length == 0 || rows.Any(row => !Enum.IsDefined(row)))
+            throw new ArgumentException("At least one valid row is required.", nameof(allowedRows));
+
+        Id = id;
+        Name = name;
+        BasePower = basePower;
+        Faction = faction;
+        Type = type;
+        Rank = rank;
+        AllowedRows = Array.AsReadOnly(rows);
+        Description = description ?? throw new ArgumentNullException(nameof(description));
+    }
+
+    public string Id { get; }
+    public string Name { get; }
+    public int BasePower { get; }
+    public string Faction { get; }
+    public string Type { get; }
+    public string Rank { get; }
+    public IReadOnlyList<Row> AllowedRows { get; }
+    public string Description { get; }
+
+    public Card CreateInstance(Row row)
+    {
+        if (!AllowedRows.Contains(row))
+            throw new ArgumentException($"Card '{Id}' cannot be played in row '{row}'.", nameof(row));
+        return new Card(this, row);
+    }
+}
+
 public sealed class Card
 {
     private Guid? _gameId;
@@ -60,6 +110,28 @@ public sealed class Card
         BasePower = power;
         Row = row;
         EffectId = effectId;
+        Faction = string.Empty;
+        Type = string.Empty;
+        Rank = string.Empty;
+        Description = string.Empty;
+        AllowedRows = Array.AsReadOnly(new[] { row });
+    }
+
+    public Card(CardDefinition definition, Row row)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (!definition.AllowedRows.Contains(row))
+            throw new ArgumentException($"Card '{definition.Id}' cannot be played in row '{row}'.", nameof(row));
+        InstanceId = Guid.NewGuid();
+        DefinitionId = definition.Id;
+        Name = definition.Name;
+        BasePower = definition.BasePower;
+        Row = row;
+        Faction = definition.Faction;
+        Type = definition.Type;
+        Rank = definition.Rank;
+        Description = definition.Description;
+        AllowedRows = definition.AllowedRows;
     }
 
     public Guid InstanceId { get; }
@@ -86,6 +158,11 @@ public sealed class Card
     }
     public Row Row { get; }
     public string? EffectId { get; }
+    public string Faction { get; }
+    public string Type { get; }
+    public string Rank { get; }
+    public string Description { get; }
+    public IReadOnlyList<Row> AllowedRows { get; }
     public CardZone Zone { get; private set; }
     public string? OwnerId => _ownerId;
 

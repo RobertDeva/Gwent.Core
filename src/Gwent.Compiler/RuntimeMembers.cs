@@ -27,6 +27,9 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "Owner" or "OwnerId" => RuntimeValue.From(card.OwnerId ?? string.Empty),
         "Range" or "Row" => RuntimeValue.From(card.Row.ToString()),
         "DefinitionId" => RuntimeValue.From(card.DefinitionId),
+        "Faction" => RuntimeValue.From(card.Faction),
+        "Type" => RuntimeValue.From(card.Type),
+        "Rank" => RuntimeValue.From(card.Rank),
         "EffectId" => RuntimeValue.From(card.EffectId ?? string.Empty),
         _ => throw UnknownMember()
     };

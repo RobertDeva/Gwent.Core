@@ -15,6 +15,30 @@ public sealed class RuntimeCardProgram
 
     public RuntimeEffectCatalog Effects { get; }
     public IReadOnlyDictionary<string, RuntimeCardDefinition> Cards { get; }
+
+    public Gwent.Engine.Card CreateCardInstance(string definitionId, Gwent.Engine.Row row)
+    {
+        if (!Cards.TryGetValue(definitionId, out var definition))
+            throw new KeyNotFoundException($"Card definition '{definitionId}' is not declared.");
+        return definition.CreateInstance(row);
+    }
+
+    public IReadOnlyList<Gwent.Engine.Card> Activate(
+        Gwent.Engine.Card card,
+        int activationIndex,
+        RuntimeExecutionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(context);
+        if (!ReferenceEquals(context.SourceCard, card))
+            throw new ArgumentException("Execution context source card does not match the activation card.", nameof(context));
+        if (!Cards.TryGetValue(card.DefinitionId, out var definition))
+            throw new KeyNotFoundException($"Card definition '{card.DefinitionId}' is not declared.");
+        if (activationIndex < 0 || activationIndex >= definition.Activations.Count)
+            throw new ArgumentOutOfRangeException(nameof(activationIndex));
+        return new RuntimeEffectExecutor(Effects).Execute(
+            definition.Activations[activationIndex], context);
+    }
 }
 
 public sealed record RuntimeCardProgramCompilationResult(

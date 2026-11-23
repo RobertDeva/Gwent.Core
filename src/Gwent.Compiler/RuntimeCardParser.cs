@@ -1,3 +1,5 @@
+using Gwent.Engine;
+
 namespace Gwent.Compiler;
 
 public sealed record RuntimeCardDefinition(
@@ -9,7 +11,32 @@ public sealed record RuntimeCardDefinition(
     string Rank,
     IReadOnlyList<string> Ranges,
     string Description,
-    IReadOnlyList<RuntimeEffectInvocation> Activations);
+    IReadOnlyList<RuntimeEffectInvocation> Activations)
+{
+    public int EvaluateBasePower()
+    {
+        var context = new RuntimeExecutionContext(
+            new Player("__compiler"),
+            new Card("__compiler", "__compiler", 0, Row.Melee),
+            instructionLimit: 1_000);
+        return Power.Evaluate(context).AsNumber();
+    }
+
+    public CardDefinition ToEngineDefinition()
+    {
+        var rows = Ranges.Select(range => range switch
+        {
+            "Melee" => Row.Melee,
+            "Range" or "Ranged" => Row.Ranged,
+            "Siege" => Row.Siege,
+            _ => throw new InvalidOperationException($"Unknown card row '{range}'.")
+        });
+        return new CardDefinition(Id, Name, EvaluateBasePower(),
+            Faction, Type, Rank, rows, Description);
+    }
+
+    public Card CreateInstance(Row row) => ToEngineDefinition().CreateInstance(row);
+}
 
 public sealed record RuntimeCardCompilationResult(
     IReadOnlyList<RuntimeCardDefinition> Cards,

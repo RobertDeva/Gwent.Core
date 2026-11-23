@@ -301,7 +301,7 @@ public sealed class RuntimeTypeAnalyzer
             RuntimeType.Card => name switch
             {
                 "Power" => RuntimeType.Number,
-                "Name" or "Owner" or "OwnerId" or "Range" or "Row" or "DefinitionId" or "EffectId" => RuntimeType.String,
+                "Name" or "Owner" or "OwnerId" or "Range" or "Row" or "DefinitionId" or "EffectId" or "Faction" or "Type" or "Rank" => RuntimeType.String,
                 _ => UnknownMember(name, effectId)
             },
             RuntimeType.Context => name switch
