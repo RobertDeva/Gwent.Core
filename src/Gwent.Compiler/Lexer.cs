@@ -30,7 +30,7 @@ public sealed class Lexer
     private void ReadIdentifier()
     {
         var line = _line; var column = _column; var start = _position;
-        var hyphenated = new[] { "while-source-on-field", "both-players-in-row" }
+        var hyphenated = new[] { "while-source-on-field", "both-players-in-row", "until-round-end" }
             .FirstOrDefault(value =>
                 _source.AsSpan(_position).StartsWith(value, StringComparison.Ordinal) &&
                 (_position + value.Length == _source.Length ||

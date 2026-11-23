@@ -88,6 +88,18 @@ public sealed class CompilerTests
         Assert.Equal(EffectDuration.WhileSourceOnField,effect.Duration); Assert.Equal(EffectOperation.Set,effect.Operation);
         Assert.Equal(EffectTargetScope.BothPlayersInRow,effect.TargetScope);
     }
+
+    [Fact]
+    public void CompilesRoundBoundEffectDuration()
+    {
+        var result = new DslCompiler().Compile(
+            "effect rally boost 2 duration until-round-end");
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+        Assert.Equal(EffectDuration.UntilRoundEnd,
+            result.Effects["rally"].ToEngineEffect().Duration);
+    }
+
     [Fact] public void CardCanReferenceEffectDeclaredLater()
     {
         var result=new DslCompiler().Compile("""

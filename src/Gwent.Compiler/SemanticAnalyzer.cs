@@ -33,6 +33,7 @@ public sealed class SemanticAnalyzer
             var duration = declaration.Duration?.ToLowerInvariant() switch
             {
                 "while-source-on-field" => EffectDuration.WhileSourceOnField,
+                "until-round-end" => EffectDuration.UntilRoundEnd,
                 null or "instant" => EffectDuration.Instant,
                 _ => (EffectDuration?)null
             };
