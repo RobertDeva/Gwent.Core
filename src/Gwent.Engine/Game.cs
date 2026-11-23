@@ -402,7 +402,7 @@ public sealed class Game
             ? owner.Field
             : First.Field.Concat(Second.Field).ToArray();
 
-        return candidates.Where(card => card.Row == source.Row);
+        return candidates.Where(card => card.InstanceId != source.InstanceId && card.Row == source.Row);
     }
 
     private void ResolveRound()
