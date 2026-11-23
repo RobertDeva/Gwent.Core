@@ -59,4 +59,7 @@ public sealed class DslCompiler
         string effectSource,
         string cardSource) =>
         new RuntimeCardProgramCompiler().Compile(effectSource, cardSource);
+
+    public RuntimeCardProgramCompilationResult CompileRuntimeProgram(string source) =>
+        new RuntimeSourceProgramCompiler().Compile(source);
 }

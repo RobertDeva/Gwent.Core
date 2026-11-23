@@ -1,9 +1,10 @@
 # Gwent.Core programmable runtime DSL
 
-The compiler exposes two compatible entry points:
+The compiler exposes three entry points:
 
 - DslCompiler.Compile(source): the small declaration grammar used by the initial engine vertical slice.
-- DslCompiler.CompileRuntimeProgram(effectSource, cardSource): the extended programmable DSL path migrated from the earlier compiler architecture.
+- DslCompiler.CompileRuntimeProgram(effectSource, cardSource): compiles effects and cards supplied separately.
+- DslCompiler.CompileRuntimeProgram(source): compiles one complete source file containing effect declarations followed by card declarations.
 
 ## Effect declarations
 
@@ -20,7 +21,7 @@ effect {
             counter = counter + 1;
         };
         for unit in targets {
-            let resultingPower = unit.Power + amount;
+            unit.Power = unit.Power + amount;
         };
     }
 }
@@ -61,14 +62,16 @@ A card activation references a reusable effect by its Type value. Arguments bind
 
 A nested PostAction can use Source: "parent" to operate on the preceding activation's selected targets.
 
-## Runtime context and expressions
+## Runtime context and collections
 
 Expressions support typed literals, identifiers, parentheses, arithmetic, comparisons, equality, Boolean operators, string concatenation, member access, collection indexers, lambda predicates, and variable assignment.
 
 The runtime context exposes context.TriggerPlayer, context.SourceCard, context.Game, context.Hand, context.Deck, context.Field, context.Graveyard, context.Board, and the corresponding opponent collections when a game is available.
 
-Collection expressions include Find, Add, Push, Remove, SendBottom, Pop, and Count. They currently transform runtime collection snapshots; they do not yet move cards between engine zones. Zone mutations must go through validated engine operations and are not silently simulated by collection copies.
+Collection expressions include Find, Add, Push, Remove, SendBottom, Pop, Shuffle, and Count. Collections obtained from player zones are live zone views: their mutations are routed through Game.MoveCard, including source-effect cleanup and ownership transfer. Pop temporarily detaches its card; every top-level effect execution verifies that all registered card instances finish in exactly one valid game zone. Collections without a game context are read-only snapshots. Filtered target lists and locally-created collections remain independent snapshots.
+
+Card Power assignments are implemented as round-scoped Set modifiers and are removed during round cleanup. Instant modifiers remain after their source leaves the field; source-bound auras are removed when their source leaves the field.
 
 ## Verification boundary
 
-The runtime compiler validates declaration references, parameter names and types, selector source names, predicate types, variable scopes, expression types, and constant card power expressions. The card catalog currently preserves faction, type, rank, range, description, and activations as compiler metadata. Complete integration with engine card types, rank immunities, special zones, leaders, and every legacy collection operation remains part of the migration.
+The runtime compiler validates declaration references, parameter names and types, selector source names, predicate types, variable scopes, expression types, and constant card power expressions. The card catalog preserves faction, type, rank, range, description, and activations as compiler metadata. Complete integration with engine card types, rank immunities, special zones, leaders, and all historical native effects remains part of the migration.
