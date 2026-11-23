@@ -15,7 +15,14 @@ public sealed class RuntimeEffectCompiler
         var lexer = new Lexer(source);
         var tokens = lexer.Tokenize();
         var parser = new RuntimeEffectParser(tokens, lexer.Diagnostics);
-        return parser.Parse();
+        var parsed = parser.Parse();
+        if (parsed.Catalog is null) return parsed;
+
+        var semanticDiagnostics = new RuntimeTypeAnalyzer().Analyze(parsed.Catalog);
+        if (semanticDiagnostics.Count == 0) return parsed;
+
+        return new RuntimeEffectCompilationResult(
+            null, parsed.Diagnostics.Concat(semanticDiagnostics).ToArray());
     }
 }
 

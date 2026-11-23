@@ -94,6 +94,49 @@ public sealed class RuntimeEffectCompilerTests
             diagnostic.Message.Contains("counter", StringComparison.Ordinal));
     }
 
+
+    [Fact]
+    public void RejectsUnknownIdentifiersDuringEffectCompilation()
+    {
+        var source = """
+            effect {
+                Name: "broken",
+                Action: (targets, context) => {
+                    let amount = missing;
+                }
+            }
+            """;
+
+        var result = new RuntimeEffectCompiler().Compile(source);
+
+        Assert.False(result.Success);
+        Assert.Null(result.Catalog);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Unknown identifier 'missing'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RejectsInvalidCardPowerAssignmentsDuringEffectCompilation()
+    {
+        var source = """
+            effect {
+                Name: "broken",
+                Action: (targets, context) => {
+                    for unit in targets {
+                        unit.Power = "strong";
+                    };
+                }
+            }
+            """;
+
+        var result = new RuntimeEffectCompiler().Compile(source);
+
+        Assert.False(result.Success);
+        Assert.Null(result.Catalog);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("numeric value", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ReportsDuplicateEffectIdentifiers()
     {
