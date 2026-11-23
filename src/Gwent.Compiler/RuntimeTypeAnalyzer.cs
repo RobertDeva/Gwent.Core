@@ -19,6 +19,20 @@ public sealed class RuntimeTypeAnalyzer
 {
     private readonly List<Diagnostic> _diagnostics = [];
 
+    public IReadOnlyList<Diagnostic> AnalyzeExpression(
+        RuntimeExpression expression,
+        RuntimeType expectedType,
+        IReadOnlyDictionary<string, RuntimeType>? variables = null)
+    {
+        ArgumentNullException.ThrowIfNull(expression);
+        _diagnostics.Clear();
+        var actualType = Infer(expression,
+            variables ?? new Dictionary<string, RuntimeType>(StringComparer.Ordinal), "card");
+        if (actualType != expectedType && actualType != RuntimeType.Unknown)
+            Add($"Expression expects '{expectedType}', but received '{actualType}'.");
+        return _diagnostics.AsReadOnly();
+    }
+
     public IReadOnlyList<Diagnostic> Analyze(RuntimeEffectCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);

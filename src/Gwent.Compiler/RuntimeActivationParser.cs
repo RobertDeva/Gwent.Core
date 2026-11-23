@@ -21,6 +21,16 @@ public sealed class RuntimeActivationParser
         _diagnostics.AddRange(lexer.Diagnostics);
     }
 
+    public RuntimeActivationParser(
+        IReadOnlyList<Token> tokens,
+        IEnumerable<Diagnostic>? lexicalDiagnostics = null)
+    {
+        _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
+        _diagnostics.AddRange(lexicalDiagnostics ?? []);
+    }
+
+    public int ConsumedTokenCount { get; private set; }
+
     public RuntimeActivationCompilationResult Parse()
     {
         ExpectIdentifier("OnActivation");
@@ -41,6 +51,7 @@ public sealed class RuntimeActivationParser
         if (Current.Kind != TokenKind.EndOfFile)
             Error(Current, "Unexpected token after OnActivation list.");
 
+        ConsumedTokenCount = _position;
         return new RuntimeActivationCompilationResult(
             activations.AsReadOnly(), _diagnostics.AsReadOnly());
     }
