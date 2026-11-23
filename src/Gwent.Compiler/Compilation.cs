@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Gwent.Engine;
@@ -39,8 +40,10 @@ public sealed class CompilationResult
         IReadOnlyDictionary<string, CompiledEffect> effects,
         IReadOnlyList<Diagnostic> diagnostics)
     {
-        Cards = cards;
-        Effects = effects;
+        Cards = new ReadOnlyDictionary<string, CardDefinition>(
+            new Dictionary<string, CardDefinition>(cards, StringComparer.Ordinal));
+        Effects = new ReadOnlyDictionary<string, CompiledEffect>(
+            new Dictionary<string, CompiledEffect>(effects, StringComparer.Ordinal));
         Diagnostics = diagnostics;
     }
 

@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace Gwent.Engine;
 
 public enum Row
@@ -39,15 +41,17 @@ public sealed class Card
 public sealed class Player
 {
     private readonly List<Card> _field = [];
+    private readonly ReadOnlyCollection<Card> _fieldView;
 
     public Player(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Player id is required.", nameof(id));
         Id = id;
+        _fieldView = _field.AsReadOnly();
     }
 
     public string Id { get; }
-    public IReadOnlyList<Card> Field => _field;
+    public IReadOnlyList<Card> Field => _fieldView;
 
     internal void Add(Card card)
     {

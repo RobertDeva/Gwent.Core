@@ -38,4 +38,14 @@ public sealed class GameTests
         Assert.Single(first.Field);
         Assert.Empty(second.Field);
     }
+
+    [Fact]
+    public void FieldCannotBeModifiedThroughReadOnlyView()
+    {
+        var player = new Player("first");
+        var field = Assert.IsAssignableFrom<IList<Card>>(player.Field);
+
+        Assert.Throws<NotSupportedException>(() => field.Add(new Card("unit", "Unit", 1, Row.Melee)));
+        Assert.Empty(player.Field);
+    }
 }

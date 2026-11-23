@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Gwent.Compiler;
 using Gwent.Engine;
 using Xunit;
@@ -42,5 +43,18 @@ public sealed class CompilerTests
         Assert.Empty(result.Cards);
         Assert.Empty(result.Effects);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("integer range", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CompilationCatalogCannotBeModifiedThroughReadOnlyView()
+    {
+        var result = new DslCompiler().Compile("""
+            card vanguard "Vanguard" power 4 row melee
+            """);
+        var cards = Assert.IsAssignableFrom<IDictionary<string, CardDefinition>>(result.Cards);
+
+        Assert.Throws<NotSupportedException>(() =>
+            cards.Add("other", new CardDefinition("other", "Other", 1, Row.Melee, null)));
+        Assert.Single(result.Cards);
     }
 }
