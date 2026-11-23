@@ -3,7 +3,7 @@
 Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity remains an outer presentation adapter and is not referenced by Engine, Compiler, or Console.
 
 - Engine owns card instances, zones, row-based boards, turn/round rules, scoring, and effect execution.
-- Compiler translates DSL source into validated card and effect definitions.
+- Compiler is a staged pipeline: Lexer → Parser → typed AST → SemanticAnalyzer → immutable CompilationResult → EffectExecutor → Engine.
 - Console loads source and coordinates commands; it does not mutate game state or implement effect rules.
 
 ## Core invariants
@@ -22,6 +22,15 @@ Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity rem
 - Row auras are applied to cards already present and cards entering the row later. The current model supports the source card, its owner's row, or both players' matching row.
 - An effect can only target its assigned card while it is on the active player's field, and each effect ID can be applied once per instance.
 - Compiler diagnostics are per compilation and invalid source publishes no partial catalogue.
+
+## Compiler stages
+
+- Lexer owns character scanning, comments, escapes, token locations, and lexical diagnostics.
+- Parser owns grammar and syntax recovery; it produces declaration nodes and never mutates the game.
+- The AST is a typed representation of declarations, independent of runtime state.
+- SemanticAnalyzer validates identifiers, numeric ranges, rows, uniqueness, and cross-references before publishing a catalog.
+- CompilationResult is the immutable compiled catalog. Invalid source never exposes partial definitions.
+- EffectExecutor binds a compiled card/effect to explicit game/player/card context and delegates all game-state changes to Engine.
 
 ## Dependencies
 

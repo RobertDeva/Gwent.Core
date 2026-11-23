@@ -18,7 +18,7 @@ public sealed class Lexer
             if (char.IsLetter(c) || c == '_') { ReadIdentifier(); continue; }
             if (char.IsDigit(c)) { ReadInteger(); continue; }
             if (c == '"') { ReadString(); continue; }
-            _diagnostics.Add(new Diagnostic(_line, $"Unexpected character '{c}' at column {_column}."));
+            _diagnostics.Add(new Diagnostic(_line, $"Unexpected character '{c}'.", _column));
             Advance();
         }
         _tokens.Add(new(TokenKind.EndOfFile, string.Empty, _line, _column));
@@ -44,19 +44,19 @@ public sealed class Lexer
         var value = new System.Text.StringBuilder();
         while (!AtEnd && Current != '"')
         {
-            if (Current == '\n') { _diagnostics.Add(new Diagnostic(line, $"Unterminated string beginning at column {column}.")); AdvanceLine(); return; }
+            if (Current == '\n') { _diagnostics.Add(new Diagnostic(line, "Unterminated string.", column)); _tokens.Add(new Token(TokenKind.NewLine, "\\n", _line, _column)); AdvanceLine(); return; }
             if (Current == '\\')
             {
                 Advance();
                 if (AtEnd) break;
                 var escaped = Current switch { '"' => '"', '\\' => '\\', 'n' => '\n', 't' => '\t', _ => '\0' };
-                if (escaped == '\0') { _diagnostics.Add(new Diagnostic(_line, $"Unsupported escape sequence at column {_column}.")); value.Append(Current); }
+                if (escaped == '\0') { _diagnostics.Add(new Diagnostic(_line, "Unsupported escape sequence.", _column)); value.Append(Current); }
                 else value.Append(escaped);
                 Advance(); continue;
             }
             value.Append(Current); Advance();
         }
-        if (AtEnd) { _diagnostics.Add(new Diagnostic(line, $"Unterminated string beginning at column {column}.")); return; }
+        if (AtEnd) { _diagnostics.Add(new Diagnostic(line, "Unterminated string.", column)); return; }
         Advance();
         _tokens.Add(new(TokenKind.String, value.ToString(), line, column));
     }

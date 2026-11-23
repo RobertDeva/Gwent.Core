@@ -2,9 +2,11 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using Gwent.Engine;
 namespace Gwent.Compiler;
-public sealed record Diagnostic(int Line, string Message)
+public sealed record Diagnostic(int Line, string Message, int Column = 0)
 {
-    public override string ToString() => $"Line {Line}: {Message}";
+    public override string ToString() => Column > 0
+        ? $"Line {Line}, column {Column}: {Message}"
+        : $"Line {Line}: {Message}";
 }
 public sealed record CompiledEffect(string Id, int PowerIncrease, EffectDuration Duration = EffectDuration.Instant, EffectOperation Operation = EffectOperation.Add, EffectTargetScope TargetScope = EffectTargetScope.SourceCard)
 {

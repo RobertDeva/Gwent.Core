@@ -37,6 +37,7 @@ public sealed class CompilerTests
             card valid "Valid" power 4 row melee
             """).Tokenize();
         var syntax=new Parser(tokens).Parse(); Assert.NotEmpty(syntax.Diagnostics); Assert.Single(syntax.Declarations);
+        Assert.True(syntax.Diagnostics[0].Column > 0);
         Assert.Equal("valid",Assert.IsType<CardDeclarationSyntax>(syntax.Declarations[0]).Id);
     }
     [Fact] public void CompilesCardsAndEffects()

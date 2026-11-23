@@ -68,5 +68,5 @@ public sealed class Parser
     private Token Previous => _tokens[Math.Max(0, _position - 1)];
     private Token Advance() { var token = Current; if (Current.Kind != TokenKind.EndOfFile) _position++; return token; }
     private bool Match(TokenKind kind) { if (Current.Kind != kind) return false; Advance(); return true; }
-    private void Error(Token token, string message) => _diagnostics.Add(new Diagnostic(token.Line, $"{message} (column {token.Column})"));
+    private void Error(Token token, string message) => _diagnostics.Add(new Diagnostic(token.Line, message, token.Column));
 }
