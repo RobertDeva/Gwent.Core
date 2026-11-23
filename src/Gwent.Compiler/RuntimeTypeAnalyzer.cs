@@ -338,7 +338,7 @@ public sealed class RuntimeTypeAnalyzer
                 "Power" => RuntimeType.Number,
                 "Owner" => RuntimeType.Player,
                 "Range" => RuntimeType.StringCollection,
-                "Name" or "OwnerId" or "Row" or "DefinitionId" or "EffectId" or "Faction" or "Type" or "Rank" => RuntimeType.String,
+                "Name" or "Description" or "OwnerId" or "Row" or "DefinitionId" or "EffectId" or "Faction" or "Type" or "Rank" => RuntimeType.String,
                 _ => UnknownMember(name, effectId)
             },
             RuntimeType.Context => name switch

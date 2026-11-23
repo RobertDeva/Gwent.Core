@@ -70,6 +70,8 @@ The runtime context exposes context.TriggerPlayer, context.SourceCard, context.G
 
 Collection expressions include Find, Add, Push, Remove, SendBottom, Pop, Shuffle, and Count. Collections obtained from player zones are live zone views: their mutations are routed through Game.MoveCard, including source-effect cleanup and ownership transfer. Pop temporarily detaches its card; every top-level effect execution verifies that all registered card instances finish in exactly one valid game zone. Collections without a game context are read-only snapshots. Filtered target lists and locally-created collections remain independent snapshots.
 
+Card member access preserves the legacy Owner property as a Player, exposes OwnerId separately, and represents Range as a read-only collection of allowed row names (with Count and index access). Row identifies the instance's selected row; Name, Description, Power, Faction, Type, Rank, DefinitionId, and EffectId are also available. The context exposes OtherPlayer alongside the opponent's zone collections.
+
 Card Power assignments are implemented as round-scoped Set modifiers and are removed during round cleanup. Instant modifiers remain after their source leaves the field; source-bound auras are removed when their source leaves the field.
 
 ## Verification boundary

@@ -24,6 +24,7 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
     private RuntimeValue ReadCard(Card card, RuntimeExecutionContext context) => MemberName switch
     {
         "Name" => RuntimeValue.From(card.Name),
+        "Description" => RuntimeValue.From(card.Description),
         "Power" => RuntimeValue.From(card.Power),
         "Owner" => RuntimeValue.From(ResolveOwner(card, context)),
         "OwnerId" => RuntimeValue.From(card.OwnerId ?? string.Empty),

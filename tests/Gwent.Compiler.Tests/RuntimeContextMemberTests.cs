@@ -45,10 +45,12 @@ public sealed class RuntimeContextMemberTests
         var ownerParser = new ExpressionParser("context.Hand[0].Owner.Id");
         var rangeParser = new ExpressionParser("context.Hand[0].Range[1]");
         var countParser = new ExpressionParser("context.Hand[0].Range.Count");
+        var descriptionParser = new ExpressionParser("context.Hand[0].Description");
 
         Assert.Equal("p1", ownerParser.Parse()!.Evaluate(context).AsString());
         Assert.Equal("Range", rangeParser.Parse()!.Evaluate(context).AsString());
         Assert.Equal(2, countParser.Parse()!.Evaluate(context).AsNumber());
+        Assert.Equal("A unit", descriptionParser.Parse()!.Evaluate(context).AsString());
     }
 
     [Fact]
