@@ -99,7 +99,7 @@ public sealed class Board
     public IReadOnlyList<Card> Cards => _rows.Values.SelectMany(cards => cards).ToArray();
     public int Score => _rows.Values.SelectMany(cards => cards).Sum(card => card.Power);
 
-    public int Score(Row row)
+    public int ScoreForRow(Row row)
     {
         ValidateRow(row);
         return _rows[row].Sum(card => card.Power);
@@ -298,7 +298,7 @@ public sealed class Game
     public static int Score(Player player, Row row)
     {
         ArgumentNullException.ThrowIfNull(player);
-        return player.Board.Score(row);
+        return player.Board.ScoreForRow(row);
     }
 
     private void ResolveRound()
