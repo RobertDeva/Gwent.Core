@@ -11,7 +11,8 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         var target = Target.Evaluate(context);
         return target.Kind switch
         {
-            RuntimeValueKind.Card => ReadCard(target.AsCard()),
+            RuntimeValueKind.Card => ReadCard(target.AsCard(), context),
+            RuntimeValueKind.StringCollection => ReadStringCollection(target.AsStrings()),
             RuntimeValueKind.Player => ReadPlayer(target.AsPlayer(), context),
             RuntimeValueKind.Game => ReadGame(target.AsGame()),
             RuntimeValueKind.ExecutionContext => ReadContext(target.AsContext()),
@@ -20,18 +21,53 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         };
     }
 
-    private RuntimeValue ReadCard(Card card) => MemberName switch
+    private RuntimeValue ReadCard(Card card, RuntimeExecutionContext context) => MemberName switch
     {
         "Name" => RuntimeValue.From(card.Name),
         "Power" => RuntimeValue.From(card.Power),
-        "Owner" or "OwnerId" => RuntimeValue.From(card.OwnerId ?? string.Empty),
-        "Range" or "Row" => RuntimeValue.From(card.Row.ToString()),
+        "Owner" => RuntimeValue.From(ResolveOwner(card, context)),
+        "OwnerId" => RuntimeValue.From(card.OwnerId ?? string.Empty),
+        "Range" => RuntimeValue.FromStrings(card.AllowedRows.Select(ToDslRange)),
+        "Row" => RuntimeValue.From(ToDslRange(card.Row)),
         "DefinitionId" => RuntimeValue.From(card.DefinitionId),
         "Faction" => RuntimeValue.From(card.Faction),
         "Type" => RuntimeValue.From(card.Type),
         "Rank" => RuntimeValue.From(card.Rank),
         "EffectId" => RuntimeValue.From(card.EffectId ?? string.Empty),
         _ => throw UnknownMember()
+    };
+
+    private RuntimeValue ReadStringCollection(IReadOnlyList<string> values) => MemberName switch
+    {
+        "Count" => RuntimeValue.From(values.Count),
+        _ => throw UnknownMember()
+    };
+
+    private static Player ResolveOwner(Card card, RuntimeExecutionContext context)
+    {
+        var ownerId = card.OwnerId ??
+            throw new InvalidOperationException("An unassigned card does not have an owner.");
+
+        if (StringComparer.Ordinal.Equals(ownerId, context.TriggerPlayer.Id))
+            return context.TriggerPlayer;
+
+        if (context.Game is not null)
+        {
+            if (StringComparer.Ordinal.Equals(ownerId, context.Game.First.Id))
+                return context.Game.First;
+            if (StringComparer.Ordinal.Equals(ownerId, context.Game.Second.Id))
+                return context.Game.Second;
+        }
+
+        throw new InvalidOperationException("Card owner is not available in the current execution context.");
+    }
+
+    private static string ToDslRange(Row row) => row switch
+    {
+        Row.Melee => "Melee",
+        Row.Ranged => "Range",
+        Row.Siege => "Siege",
+        _ => throw new ArgumentOutOfRangeException(nameof(row))
     };
 
     private RuntimeValue ReadPlayer(Player player, RuntimeExecutionContext context) => MemberName switch

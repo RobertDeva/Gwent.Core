@@ -9,6 +9,7 @@ public enum RuntimeType
     String,
     Card,
     CardCollection,
+    StringCollection,
     Lambda,
     Player,
     Game,
@@ -206,6 +207,7 @@ public sealed class RuntimeTypeAnalyzer
                     RuntimeValueKind.String => RuntimeType.String,
                     RuntimeValueKind.Card => RuntimeType.Card,
                     RuntimeValueKind.CardCollection => RuntimeType.CardCollection,
+                    RuntimeValueKind.StringCollection => RuntimeType.StringCollection,
                     RuntimeValueKind.Lambda => RuntimeType.Lambda,
                     RuntimeValueKind.Player => RuntimeType.Player,
                     RuntimeValueKind.Game => RuntimeType.Game,
@@ -270,11 +272,13 @@ public sealed class RuntimeTypeAnalyzer
             case IndexExpression index:
                 var collection = Infer(index.Collection, variables, effectId);
                 var indexType = Infer(index.Index, variables, effectId);
-                if (collection != RuntimeType.CardCollection && collection != RuntimeType.Unknown)
-                    Add($"Indexer in effect '{effectId}' requires a card collection.");
+                if (collection != RuntimeType.CardCollection &&
+                    collection != RuntimeType.StringCollection &&
+                    collection != RuntimeType.Unknown)
+                    Add($"Indexer in effect '{effectId}' requires an indexable collection.");
                 if (indexType != RuntimeType.Number && indexType != RuntimeType.Unknown)
                     Add($"Collection index in effect '{effectId}' must be numeric.");
-                return RuntimeType.Card;
+                return collection == RuntimeType.StringCollection ? RuntimeType.String : RuntimeType.Card;
             case CollectionMethodExpression method:
                 var receiver = Infer(method.Collection, variables, effectId);
                 if (receiver != RuntimeType.CardCollection && receiver != RuntimeType.Unknown)
@@ -332,7 +336,9 @@ public sealed class RuntimeTypeAnalyzer
             RuntimeType.Card => name switch
             {
                 "Power" => RuntimeType.Number,
-                "Name" or "Owner" or "OwnerId" or "Range" or "Row" or "DefinitionId" or "EffectId" or "Faction" or "Type" or "Rank" => RuntimeType.String,
+                "Owner" => RuntimeType.Player,
+                "Range" => RuntimeType.StringCollection,
+                "Name" or "OwnerId" or "Row" or "DefinitionId" or "EffectId" or "Faction" or "Type" or "Rank" => RuntimeType.String,
                 _ => UnknownMember(name, effectId)
             },
             RuntimeType.Context => name switch
@@ -341,6 +347,11 @@ public sealed class RuntimeTypeAnalyzer
                 "SourceCard" => RuntimeType.Card,
                 "Game" => RuntimeType.Game,
                 "Hand" or "Deck" or "Field" or "Graveyard" or "Board" or "OtherHand" or "OtherDeck" or "OtherField" => RuntimeType.CardCollection,
+                _ => UnknownMember(name, effectId)
+            },
+            RuntimeType.StringCollection => name switch
+            {
+                "Count" => RuntimeType.Number,
                 _ => UnknownMember(name, effectId)
             },
             RuntimeType.Player => name switch

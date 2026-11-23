@@ -10,6 +10,7 @@ public enum RuntimeValueKind
     String,
     Card,
     CardCollection,
+    StringCollection,
     Lambda,
     Player,
     Game,
@@ -43,6 +44,12 @@ public sealed class RuntimeValue
     }
     public static RuntimeValue FromCardCollection(RuntimeCardCollection value) =>
         new(RuntimeValueKind.CardCollection, value ?? throw new ArgumentNullException(nameof(value)));
+    public static RuntimeValue FromStrings(IEnumerable<string> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        return new RuntimeValue(RuntimeValueKind.StringCollection,
+            Array.AsReadOnly(values.ToArray()));
+    }
     public static RuntimeValue FromZoneCards(
         RuntimeExecutionContext context, Player owner, CardZone zone) =>
         new(RuntimeValueKind.CardCollection, RuntimeCardCollection.ForZone(context, owner, zone));
@@ -76,6 +83,10 @@ public sealed class RuntimeValue
     public RuntimeCardCollection AsCardCollection() => Kind == RuntimeValueKind.CardCollection
         ? (RuntimeCardCollection)Value!
         : throw TypeError(RuntimeValueKind.CardCollection);
+
+    public IReadOnlyList<string> AsStrings() => Kind == RuntimeValueKind.StringCollection
+        ? (IReadOnlyList<string>)Value!
+        : throw TypeError(RuntimeValueKind.StringCollection);
 
     public RuntimeLambda AsLambda() => Kind == RuntimeValueKind.Lambda
         ? (RuntimeLambda)Value!

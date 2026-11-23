@@ -6,11 +6,18 @@ public sealed record IndexExpression(RuntimeExpression Collection, RuntimeExpres
     public override RuntimeValue Evaluate(RuntimeExecutionContext context)
     {
         context.ConsumeInstruction();
-        var collection = Collection.Evaluate(context).AsCards();
+        var collection = Collection.Evaluate(context);
         var index = Index.Evaluate(context).AsNumber();
-        if (index < 0 || index >= collection.Count)
-            throw new ArgumentOutOfRangeException(nameof(Index), index, "Card collection index is out of range.");
-        return RuntimeValue.From(collection[index]);
+        return collection.Kind switch
+        {
+            RuntimeValueKind.CardCollection when index >= 0 && index < collection.AsCards().Count =>
+                RuntimeValue.From(collection.AsCards()[index]),
+            RuntimeValueKind.StringCollection when index >= 0 && index < collection.AsStrings().Count =>
+                RuntimeValue.From(collection.AsStrings()[index]),
+            RuntimeValueKind.CardCollection or RuntimeValueKind.StringCollection =>
+                throw new ArgumentOutOfRangeException(nameof(Index), index, "Collection index is out of range."),
+            _ => throw new InvalidOperationException($"Value '{collection.Kind}' cannot be indexed.")
+        };
     }
 }
 

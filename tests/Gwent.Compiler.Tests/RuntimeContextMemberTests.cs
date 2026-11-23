@@ -26,6 +26,31 @@ public sealed class RuntimeContextMemberTests
     }
 
 
+
+    [Fact]
+    public void ExposesCardOwnerAndAllowedRangesWithTheirLegacyTypes()
+    {
+        var first = new Player("p1");
+        var game = new Game(first, new Player("p2"));
+        var definition = new CardDefinition(
+            "unit", "Unit", 4, "Northern", "Unit", "Silver",
+            [Row.Melee, Row.Ranged], "A unit");
+        var card = definition.CreateInstance(Row.Melee);
+        game.AddToDeck(first, card);
+        game.Draw(first);
+
+        var context = new RuntimeExecutionContext(
+            first, new Card("source", "Source", 1, Row.Melee), game);
+
+        var ownerParser = new ExpressionParser("context.Hand[0].Owner.Id");
+        var rangeParser = new ExpressionParser("context.Hand[0].Range[1]");
+        var countParser = new ExpressionParser("context.Hand[0].Range.Count");
+
+        Assert.Equal("p1", ownerParser.Parse()!.Evaluate(context).AsString());
+        Assert.Equal("Range", rangeParser.Parse()!.Evaluate(context).AsString());
+        Assert.Equal(2, countParser.Parse()!.Evaluate(context).AsNumber());
+    }
+
     [Fact]
     public void ExposesOtherPlayerAsATypedContextMember()
     {
