@@ -114,7 +114,7 @@ public sealed class CompilerEngineIntegrationTests
         game.AddToDeck(second, unit);
         game.Draw(first);
         game.Play(first, weather);
-        game.ApplyEffect(first, weather, result.Effects["frost"].ToEngineEffect());
+        Assert.True(result.ApplyCardEffect(game, first, weather));
 
         game.EndTurn();
         game.Draw(second);
