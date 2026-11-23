@@ -81,7 +81,6 @@ public sealed class RuntimeCardCollection
             _cards.RemoveAll(existing => existing.InstanceId == card.InstanceId);
             _cards.Add(card);
         }
-        Refresh();
     }
 
     public void SendBottom(Card card)
@@ -97,7 +96,6 @@ public sealed class RuntimeCardCollection
             _cards.RemoveAll(existing => existing.InstanceId == card.InstanceId);
             _cards.Insert(0, card);
         }
-        Refresh();
     }
 
     public void Remove(Card card)
@@ -117,7 +115,6 @@ public sealed class RuntimeCardCollection
         }
         else
             _cards.RemoveAll(existing => existing.InstanceId == card.InstanceId);
-        Refresh();
     }
 
     public Card? Pop()
@@ -130,7 +127,6 @@ public sealed class RuntimeCardCollection
             _context!.Game!.MoveCard(card, _owner!, CardZone.Unassigned);
         else
             _cards.RemoveAt(_cards.Count - 1);
-        Refresh();
         return card;
     }
 
@@ -148,7 +144,6 @@ public sealed class RuntimeCardCollection
                 (_cards[i], _cards[j]) = (_cards[j], _cards[i]);
             }
         }
-        Refresh();
     }
 
     private bool IsZoneBound => _context is not null && _owner is not null && _zone is not null;
