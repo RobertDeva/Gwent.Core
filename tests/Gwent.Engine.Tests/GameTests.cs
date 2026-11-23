@@ -254,6 +254,47 @@ public sealed class GameTests
     }
 
     [Fact]
+    public void RemovingOnePersistentSourcePreservesModifiersFromOtherSources()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var firstAura = new Card("aura-one", "Aura One", 0, Row.Melee, "aura");
+        var secondAura = new Card("aura-two", "Aura Two", 0, Row.Melee, "aura");
+        var unit = new Card("unit", "Unit", 5, Row.Melee);
+
+        game.AddToDeck(first, unit);
+        game.AddToDeck(first, secondAura);
+        game.AddToDeck(first, firstAura);
+        game.Draw(first);
+        game.Draw(first);
+        game.Play(first, firstAura);
+        game.ApplyEffect(first, firstAura, new CardEffect(
+            "aura", 2, EffectDuration.WhileSourceOnField,
+            EffectOperation.Add, EffectTargetScope.OwnRow));
+
+        game.EndTurn();
+        game.EndTurn();
+        game.Play(first, secondAura);
+        game.ApplyEffect(first, secondAura, new CardEffect(
+            "aura", 3, EffectDuration.WhileSourceOnField,
+            EffectOperation.Add, EffectTargetScope.OwnRow));
+
+        game.EndTurn();
+        game.EndTurn();
+        game.Draw(first);
+        game.Play(first, unit);
+
+        Assert.Equal(10, unit.Power);
+
+        game.Destroy(first, firstAura);
+
+        Assert.Equal(8, unit.Power);
+        Assert.Equal(CardZone.Graveyard, firstAura.Zone);
+        Assert.Equal(CardZone.Field, secondAura.Zone);
+    }
+
+    [Fact]
     public void InstantEffectRemainsAfterItsSourceLeavesTheField()
     {
         var first = new Player("first");
