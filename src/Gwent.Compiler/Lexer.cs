@@ -44,7 +44,7 @@ public sealed class Lexer
         var value = new System.Text.StringBuilder();
         while (!AtEnd && Current != '"')
         {
-            if (Current == '\n') { _diagnostics.Add(new Diagnostic(line, "Unterminated string.", column)); _tokens.Add(new Token(TokenKind.NewLine, "\\n", _line, _column)); AdvanceLine(); return; }
+            if (Current == '\n') { _diagnostics.Add(new Diagnostic(line, "Unterminated string.", column)); _tokens.Add(new Token(TokenKind.NewLine, "\n", _line, _column)); AdvanceLine(); return; }
             if (Current == '\\')
             {
                 Advance();
