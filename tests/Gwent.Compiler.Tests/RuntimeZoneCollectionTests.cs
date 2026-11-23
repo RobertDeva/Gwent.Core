@@ -64,6 +64,54 @@ public sealed class RuntimeZoneCollectionTests
         Assert.Equal(4, player.Board.Score);
     }
 
+
+    [Fact]
+    public void RemoveMovesCardFromHandToGraveyard()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var card = new Card("unit", "Unit", 3, Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        context.Scope.Define("card", RuntimeValue.From(card));
+
+        new ExpressionParser("context.Hand.Remove(card)").Parse()!.Evaluate(context);
+
+        Assert.Equal(CardZone.Graveyard, card.Zone);
+        Assert.Empty(player.Hand);
+        Assert.Contains(card, player.Graveyard);
+    }
+
+    [Fact]
+    public void ForEachCanRemoveCardsFromTheLiveZoneWithoutInvalidatingIteration()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var cards = Enumerable.Range(0, 3)
+            .Select(index => new Card($"unit-{index}", $"Unit {index}", index + 1, Row.Melee))
+            .ToArray();
+        foreach (var card in cards)
+        {
+            game.AddToDeck(player, card);
+            game.Draw(player);
+        }
+
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        var hand = new RuntimeMemberExpression(new VariableExpression("context"), "Hand");
+        var removeCurrent = new EvaluateStatement(new CollectionMethodExpression(
+            hand, "Remove", [new VariableExpression("unit")]));
+        var loop = new ForEachCardStatement("unit", hand, [removeCurrent]);
+
+        new RuntimeInterpreter().Execute([loop], context);
+
+        Assert.Empty(player.Hand);
+        Assert.Equal(3, player.Graveyard.Count);
+        Assert.All(cards, card => Assert.Equal(CardZone.Graveyard, card.Zone));
+    }
+
     [Fact]
     public void ShuffleUsesExecutionScopedRandomSource()
     {
