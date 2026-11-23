@@ -261,15 +261,9 @@ public sealed class RuntimeCardParser
             return null;
         }
 
-        var text = string.Join(" ", expressionTokens.Select(token =>
-            token.Kind == TokenKind.String
-                ? "\"" + token.Text.Replace("\\", "\\\\").Replace("\"", "\\\"")
-                    .Replace("\n", "\\n").Replace("\t", "\\t") + "\""
-                : token.Text));
-        var parser = new ExpressionParser(text);
+        var parser = new ExpressionParser(expressionTokens);
         var expression = parser.Parse();
-        foreach (var diagnostic in parser.Diagnostics)
-            Error(expressionTokens[0], diagnostic.Message);
+        _diagnostics.AddRange(parser.Diagnostics);
         return expression;
     }
 

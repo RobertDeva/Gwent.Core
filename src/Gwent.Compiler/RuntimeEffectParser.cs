@@ -242,11 +242,9 @@ public sealed class RuntimeEffectParser
             return null;
         }
 
-        var source = string.Join(" ", expressionTokens.Select(FormatToken));
-        var parser = new ExpressionParser(source);
+        var parser = new ExpressionParser(expressionTokens);
         var expression = parser.Parse();
-        foreach (var diagnostic in parser.Diagnostics)
-            Error(expressionTokens[0], diagnostic.Message);
+        _diagnostics.AddRange(parser.Diagnostics);
         return expression;
     }
 

@@ -14,6 +14,20 @@ public sealed class ExpressionParser
         _diagnostics.AddRange(lexer.Diagnostics);
     }
 
+    public ExpressionParser(IReadOnlyList<Token> tokens)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+        var copy = tokens.ToList();
+        if (copy.Count == 0)
+            copy.Add(new Token(TokenKind.EndOfFile, string.Empty, 1, 1));
+        else if (copy[^1].Kind != TokenKind.EndOfFile)
+        {
+            var last = copy[^1];
+            copy.Add(new Token(TokenKind.EndOfFile, string.Empty, last.Line, last.Column + last.Text.Length));
+        }
+        _tokens = copy.AsReadOnly();
+    }
+
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.AsReadOnly();
 
     public RuntimeExpression? Parse()

@@ -96,6 +96,27 @@ public sealed class RuntimeEffectCompilerTests
 
 
 
+
+    [Fact]
+    public void RuntimeExpressionSyntaxDiagnosticsPreserveOriginalSourceLocation()
+    {
+        var source = """
+            effect {
+                Name: "broken",
+                Action: (targets, context) => {
+                    let value = 1 + ;
+                }
+            }
+            """;
+
+        var result = new RuntimeEffectCompiler().Compile(source);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Line == 4 && diagnostic.Column > 0 &&
+            diagnostic.Message.Contains("Expected an expression", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void TypeChecksLegacyPlayerZoneHelperFunctions()
     {
