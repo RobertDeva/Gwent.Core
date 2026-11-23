@@ -23,8 +23,13 @@ foreach (var definition in compilation.Cards.Values)
 {
     var card = definition.CreateCard();
     game.Play(human, card);
+
     if (card.EffectId is not null)
-        compilation.Effects[card.EffectId].Execute(card);
+    {
+        var effect = compilation.Effects[card.EffectId];
+        card.IncreasePower(effect.PowerIncrease);
+    }
+
     Console.WriteLine($"{card.Name,-22} {card.Row,-7} {card.Power,2} power");
 }
 

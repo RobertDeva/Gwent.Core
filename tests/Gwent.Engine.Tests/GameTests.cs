@@ -23,4 +23,19 @@ public sealed class GameTests
         var game = new Game(new Player("a"), new Player("b"));
         Assert.Throws<InvalidOperationException>(() => game.Play(new Player("c"), new Card("x", "X", 1, Row.Siege)));
     }
+
+    [Fact]
+    public void CardInstanceCannotBePlayedTwiceInOneGame()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var card = new Card("unit", "Unit", 5, Row.Melee);
+
+        game.Play(first, card);
+
+        Assert.Throws<InvalidOperationException>(() => game.Play(second, card));
+        Assert.Single(first.Field);
+        Assert.Empty(second.Field);
+    }
 }

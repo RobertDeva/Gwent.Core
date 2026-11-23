@@ -29,4 +29,18 @@ public sealed class CompilerTests
         Assert.Empty(result.Cards);
         Assert.Empty(result.Effects);
     }
+
+    [Fact]
+    public void IntegerOverflowProducesDiagnosticInsteadOfThrowing()
+    {
+        var result = new DslCompiler().Compile("""
+            effect rally boost 999999999999999999999999
+            card vanguard "Vanguard" power 4 row melee
+            """);
+
+        Assert.False(result.Success);
+        Assert.Empty(result.Cards);
+        Assert.Empty(result.Effects);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("integer range", StringComparison.Ordinal));
+    }
 }

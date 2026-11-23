@@ -9,10 +9,8 @@ public sealed record Diagnostic(int Line, string Message)
     public override string ToString() => $"Line {Line}: {Message}";
 }
 
-public sealed record CompiledEffect(string Id, int PowerIncrease)
-{
-    public void Execute(Card target) => target.IncreasePower(PowerIncrease);
-}
+// Compiled effect data is intentionally separate from engine execution.
+public sealed record CompiledEffect(string Id, int PowerIncrease);
 
 public sealed class CardDefinition
 {
@@ -24,23 +22,28 @@ public sealed class CardDefinition
         Row = row;
         EffectId = effectId;
     }
+
     public string Id { get; }
     public string Name { get; }
     public int Power { get; }
     public Row Row { get; }
     public string? EffectId { get; }
+
     public Card CreateCard() => new(Id, Name, Power, Row, EffectId);
 }
 
 public sealed class CompilationResult
 {
-    internal CompilationResult(IReadOnlyDictionary<string, CardDefinition> cards,
-        IReadOnlyDictionary<string, CompiledEffect> effects, IReadOnlyList<Diagnostic> diagnostics)
+    internal CompilationResult(
+        IReadOnlyDictionary<string, CardDefinition> cards,
+        IReadOnlyDictionary<string, CompiledEffect> effects,
+        IReadOnlyList<Diagnostic> diagnostics)
     {
         Cards = cards;
         Effects = effects;
         Diagnostics = diagnostics;
     }
+
     public IReadOnlyDictionary<string, CardDefinition> Cards { get; }
     public IReadOnlyDictionary<string, CompiledEffect> Effects { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
@@ -75,7 +78,12 @@ public sealed class DslCompiler
             if (effectMatch.Success)
             {
                 var id = effectMatch.Groups["id"].Value;
-                var amount = int.Parse(effectMatch.Groups["amount"].Value, CultureInfo.InvariantCulture);
+                if (!TryParseNonNegativeInteger(effectMatch.Groups["amount"].Value, out var amount))
+                {
+                    diagnostics.Add(new Diagnostic(index + 1, $"Effect '{id}' has a value outside the supported integer range."));
+                    continue;
+                }
+
                 if (!effects.TryAdd(id, new CompiledEffect(id, amount)))
                     diagnostics.Add(new Diagnostic(index + 1, $"Duplicate effect id '{id}'."));
                 continue;
@@ -100,6 +108,13 @@ public sealed class DslCompiler
                 diagnostics.Add(new Diagnostic(line, $"Duplicate card id '{id}'."));
                 continue;
             }
+
+            if (!TryParseNonNegativeInteger(match.Groups["power"].Value, out var power))
+            {
+                diagnostics.Add(new Diagnostic(line, $"Card '{id}' has a power outside the supported integer range."));
+                continue;
+            }
+
             if (effectId is not null && !effects.ContainsKey(effectId))
             {
                 diagnostics.Add(new Diagnostic(line, $"Card '{id}' references unknown effect '{effectId}'."));
@@ -107,7 +122,6 @@ public sealed class DslCompiler
             }
 
             var row = Enum.Parse<Row>(match.Groups["row"].Value, ignoreCase: true);
-            var power = int.Parse(match.Groups["power"].Value, CultureInfo.InvariantCulture);
             cards.Add(id, new CardDefinition(id, match.Groups["name"].Value, power, row, effectId));
         }
 
@@ -121,4 +135,7 @@ public sealed class DslCompiler
 
         return new CompilationResult(cards, effects, diagnostics.AsReadOnly());
     }
+
+    private static bool TryParseNonNegativeInteger(string value, out int result) =>
+        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out result);
 }

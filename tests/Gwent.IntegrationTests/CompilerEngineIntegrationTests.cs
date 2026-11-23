@@ -21,7 +21,8 @@ public sealed class CompilerEngineIntegrationTests
         var card = result.Cards["vanguard"].CreateCard();
 
         game.Play(player, card);
-        result.Effects[card.EffectId!].Execute(card);
+        var effect = result.Effects[card.EffectId!];
+        card.IncreasePower(effect.PowerIncrease);
 
         Assert.Equal(7, card.Power);
         Assert.Equal(7, Game.Score(player));

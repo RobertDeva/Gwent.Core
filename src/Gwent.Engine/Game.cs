@@ -28,6 +28,7 @@ public sealed class Card
     public int Power { get; private set; }
     public Row Row { get; }
     public string? EffectId { get; }
+
     public void IncreasePower(int amount)
     {
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
@@ -38,13 +39,16 @@ public sealed class Card
 public sealed class Player
 {
     private readonly List<Card> _field = [];
+
     public Player(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Player id is required.", nameof(id));
         Id = id;
     }
+
     public string Id { get; }
     public IReadOnlyList<Card> Field => _field;
+
     internal void Add(Card card)
     {
         ArgumentNullException.ThrowIfNull(card);
@@ -62,8 +66,10 @@ public sealed class Game
         Second = second ?? throw new ArgumentNullException(nameof(second));
         if (ReferenceEquals(first, second)) throw new ArgumentException("A game requires two distinct players.");
     }
+
     public Player First { get; }
     public Player Second { get; }
+
     public Player? Winner
     {
         get
@@ -73,14 +79,21 @@ public sealed class Game
             return first == second ? null : first > second ? First : Second;
         }
     }
+
     public void Play(Player player, Card card)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(card);
         if (!ReferenceEquals(player, First) && !ReferenceEquals(player, Second))
             throw new InvalidOperationException("Player does not belong to this game.");
+
+        // A card instance represents one physical card and cannot occupy two fields.
+        if (First.Field.Contains(card) || Second.Field.Contains(card))
+            throw new InvalidOperationException($"Card '{card.Id}' is already in this game.");
+
         player.Add(card);
     }
+
     public static int Score(Player player)
     {
         ArgumentNullException.ThrowIfNull(player);

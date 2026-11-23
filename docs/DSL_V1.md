@@ -14,8 +14,9 @@ card <identifier> "<display name>" power <non-negative-integer> row <melee|range
 - Las líneas vacías y los comentarios que comienzan con `#` se ignoran.
 - Los identificadores comienzan con letra o guion bajo.
 - Las cartas pueden referenciar efectos declarados en el mismo archivo.
+- Los números deben caber en un entero con signo de 32 bits; los valores fuera del rango producen diagnósticos.
 - La compilación es atómica: ante cualquier diagnóstico no se publica ningún catálogo parcial.
-- Un efecto `boost N` aumenta en N la potencia de la carta que lo referencia.
+- Un efecto `boost N` describe un aumento de N en la potencia de la carta que lo referencia. El compilador conserva esa descripción; la aplicación coordina su ejecución mediante la operación del motor.
 
 ## Ejecución
 
