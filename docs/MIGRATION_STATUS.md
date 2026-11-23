@@ -21,10 +21,12 @@
 ## Remaining
 
 - The compatibility grammar still supports card/effect declarations and simple boost metadata. The extended runtime DSL is currently compiled through DslCompiler.CompileRuntimeProgram(effectSource, cardSource); unifying both source files into a single source program remains pending.
-- Collection expressions currently operate on immutable runtime snapshots; zone-changing Add/Remove/Push/Pop/SendBottom operations must be connected to explicit engine transitions before they can be considered behaviorally complete.
-- A separate runtime DSL path now parses reusable effect blocks, typed parameters, action expressions, while/for statements, card activation selectors, predicates, and nested PostAction; it performs static type and reference checks before producing a runtime catalog.
-- Runtime effect execution now uses per-invocation scopes, typed values, parameter binding, source resolution, selector filtering, and bounded interpretation. The original simple declaration compiler remains available as a compatibility path.
-- Card metadata and activation declarations are parsed into a compiler-side card catalog. Mapping every historical card property and operation to engine-owned zone/rank/type semantics remains in progress.
+- Collection behavior still requires broader compatibility testing against the historical runtime, especially ordering semantics for Push/SendBottom/Pop, mutations during iteration, and edge cases when a card is detached from a zone.
+- The runtime DSL parses reusable effect blocks, typed parameters, action expressions, while/for statements, card activation selectors, predicates, and nested PostAction; it performs static type and reference checks before producing a runtime catalog.
+- Runtime effect execution uses per-invocation scopes, typed values, parameter binding, source resolution, selector filtering, and bounded interpretation. The original simple declaration compiler remains available as a compatibility path.
+- Runtime card metadata and activation declarations compile into a card catalog. RuntimeCardProgram creates distinct engine card instances from those definitions and executes indexed activations against an explicit engine execution context.
+- Player-zone collections are live views when a game context exists. Add, Push, Remove, SendBottom, Pop, and Shuffle route mutations through validated engine transitions; local and filtered collections remain snapshots. Top-level effect execution validates card-zone integrity.
+- End-to-end DSL execution is covered by integration tests; current CI passes the complete build, test suite, and console smoke test.
 - Player-driven console interaction, initial hand/deck construction rules, and complete acceptance scenario.
 - Card rank/type filtering (for example, weather affecting only the appropriate unit ranks), special-card zones, leader effects, round-persistence exceptions, and complete tie/round rules remain to be specified and implemented.
 - The historical first project also contains temporary unit statuses (buff/debuff) reset at round cleanup; these must be modeled separately from source-bound row auras.
