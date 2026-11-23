@@ -95,4 +95,25 @@ public sealed class CompilerTests
             """);
         Assert.True(result.Success); Assert.Equal("rally",result.Cards["vanguard"].EffectId);
     }
+    [Fact]
+    public void SemanticAnalyzerRejectsUnknownEffectReferences()
+    {
+        var syntax = new Parser(new Lexer("card unit \"Unit\" power 3 row melee effect missing").Tokenize()).Parse();
+        var result = new SemanticAnalyzer().Analyze(syntax);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("unknown effect", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CompilerCanUseInjectedSemanticAnalyzer()
+    {
+        var analyzer = new SemanticAnalyzer();
+        var compiler = new DslCompiler(analyzer);
+
+        var result = compiler.Compile("card unit \"Unit\" power 3 row melee");
+
+        Assert.True(result.Success);
+    }
+
 }
