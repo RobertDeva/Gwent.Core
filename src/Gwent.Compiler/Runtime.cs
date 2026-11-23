@@ -134,10 +134,15 @@ public sealed class RuntimeExecutionContext
     public RuntimeExecutionContext(
         Player triggerPlayer,
         Card sourceCard,
+        Game? game = null,
         int instructionLimit = 10_000)
     {
         TriggerPlayer = triggerPlayer ?? throw new ArgumentNullException(nameof(triggerPlayer));
         SourceCard = sourceCard ?? throw new ArgumentNullException(nameof(sourceCard));
+        Game = game;
+        if (game is not null && !ReferenceEquals(game.First, triggerPlayer) &&
+            !ReferenceEquals(game.Second, triggerPlayer))
+            throw new ArgumentException("Trigger player does not belong to the supplied game.", nameof(triggerPlayer));
         if (instructionLimit <= 0)
             throw new ArgumentOutOfRangeException(nameof(instructionLimit));
 
@@ -147,6 +152,7 @@ public sealed class RuntimeExecutionContext
 
     public Player TriggerPlayer { get; }
     public Card SourceCard { get; }
+    public Game? Game { get; }
     public int InstructionLimit { get; }
     public int InstructionsExecuted => _instructionsExecuted;
     public RuntimeScope Scope { get; private set; }
