@@ -64,6 +64,29 @@ public sealed class RuntimeCardProgram
         return definition.CreateInstance(row);
     }
 
+    public IReadOnlyList<IReadOnlyList<Gwent.Engine.Card>> Play(
+        Gwent.Engine.Game game,
+        Gwent.Engine.Player player,
+        Gwent.Engine.Card card,
+        int instructionLimit = 10_000,
+        Random? random = null)
+    {
+        ArgumentNullException.ThrowIfNull(game);
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(card);
+        if (!Cards.TryGetValue(card.DefinitionId, out var definition))
+            throw new KeyNotFoundException($"No compiled card definition exists for '{card.DefinitionId}'.");
+        if (!game.ContainsCard(card))
+            throw new ArgumentException("Card instance does not belong to the supplied game.", nameof(card));
+
+        game.Play(player, card);
+        var context = new RuntimeExecutionContext(player, card, game, instructionLimit, random);
+        var results = new List<IReadOnlyList<Gwent.Engine.Card>>(definition.Activations.Count);
+        for (var index = 0; index < definition.Activations.Count; index++)
+            results.Add(Activate(card, index, context));
+        return results.AsReadOnly();
+    }
+
     public IReadOnlyList<Gwent.Engine.Card> Activate(
         Gwent.Engine.Card card,
         int activationIndex,

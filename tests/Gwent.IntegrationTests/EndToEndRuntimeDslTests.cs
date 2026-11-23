@@ -6,6 +6,52 @@ namespace Gwent.Compiler.Tests;
 
 public sealed class EndToEndRuntimeDslTests
 {
+
+    [Fact]
+    public void PlayingCompiledCardExecutesEveryActivationInOrder()
+    {
+        var source = """
+            effect {
+                Name: "rally",
+                Params: { amount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets {
+                        unit.Power = unit.Power + amount;
+                    };
+                }
+            }
+
+            card vanguard {
+                Name: "Vanguard";
+                Power: 4;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "A vanguard";
+                OnActivation: [
+                    { Type: "rally", Params: { amount: 2, }, Selector: { Source: "field"; Single: true; } },
+                    { Type: "rally", Params: { amount: 3, }, Selector: { Source: "field"; Single: true; } },
+                ];
+            }
+            """;
+
+        var compiled = new DslCompiler().CompileRuntimeProgram(source);
+        Assert.True(compiled.Success, string.Join(Environment.NewLine, compiled.Diagnostics));
+
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var card = compiled.Program!.CreateCardInstance("vanguard", Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+
+        var results = compiled.Program.Play(game, player, card);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(9, card.Power);
+        game.ValidateCardZones();
+    }
+
     [Fact]
     public void CompilesAndExecutesCardActivationAgainstTheEngine()
     {
@@ -50,10 +96,7 @@ public sealed class EndToEndRuntimeDslTests
         var card = compiled.Program!.CreateCardInstance("vanguard", Row.Melee);
         game.AddToDeck(player, card);
         game.Draw(player);
-        game.Play(player, card);
-
-        var context = new RuntimeExecutionContext(player, card, game);
-        compiled.Program.Activate(card, 0, context);
+        compiled.Program.Play(game, player, card);
 
         Assert.Equal(6, card.Power);
         game.ValidateCardZones();
