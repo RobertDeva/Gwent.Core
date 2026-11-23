@@ -48,6 +48,21 @@ public sealed class RuntimeCardProgramCompiler
             }
 
             diagnostics.AddRange(typeAnalyzer.AnalyzeExpression(card.Power, RuntimeType.Number));
+            try
+            {
+                var evaluationContext = new RuntimeExecutionContext(
+                    new Gwent.Engine.Player("__compiler"),
+                    new Gwent.Engine.Card("__compiler", "__compiler", 0, Gwent.Engine.Row.Melee),
+                    instructionLimit: 1_000);
+                var power = card.Power.Evaluate(evaluationContext).AsNumber();
+                if (power < 0)
+                    diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' has negative power."));
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or
+                ArgumentOutOfRangeException or OverflowException or DivideByZeroException)
+            {
+                diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' has an invalid constant power expression: {exception.Message}"));
+            }
             diagnostics.AddRange(new RuntimeTypeAnalyzer()
                 .AnalyzeActivations(effectResult.Catalog, card.Activations));
             foreach (var range in card.Ranges)

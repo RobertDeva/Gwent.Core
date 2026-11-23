@@ -54,4 +54,9 @@ public sealed class DslCompiler
         var syntax = new Parser(tokens).Parse();
         return _semanticAnalyzer.Analyze(syntax, lexer.Diagnostics);
     }
+
+    public RuntimeCardProgramCompilationResult CompileRuntimeProgram(
+        string effectSource,
+        string cardSource) =>
+        new RuntimeCardProgramCompiler().Compile(effectSource, cardSource);
 }
