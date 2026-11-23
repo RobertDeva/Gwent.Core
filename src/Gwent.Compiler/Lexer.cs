@@ -30,7 +30,20 @@ public sealed class Lexer
     private void ReadIdentifier()
     {
         var line = _line; var column = _column; var start = _position;
-        while (!AtEnd && (char.IsLetterOrDigit(Current) || Current == '_' || Current == '-')) Advance();
+        var hyphenated = new[] { "while-source-on-field", "both-players-in-row" }
+            .FirstOrDefault(value =>
+                _source.AsSpan(_position).StartsWith(value, StringComparison.Ordinal) &&
+                (_position + value.Length == _source.Length ||
+                 !char.IsLetterOrDigit(_source[_position + value.Length]) &&
+                 _source[_position + value.Length] != '_'));
+        if (hyphenated is not null)
+        {
+            for (var i = 0; i < hyphenated.Length; i++) Advance();
+        }
+        else
+        {
+            while (!AtEnd && (char.IsLetterOrDigit(Current) || Current == '_')) Advance();
+        }
         _tokens.Add(new(TokenKind.Identifier, _source[start.._position], line, column));
     }
     private void ReadInteger()
