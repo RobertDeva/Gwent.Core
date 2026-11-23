@@ -10,7 +10,7 @@ public sealed class RuntimeCardProgram
     {
         Effects = effects ?? throw new ArgumentNullException(nameof(effects));
         Cards = new ReadOnlyDictionary<string, RuntimeCardDefinition>(
-            new Dictionary<string, RuntimeCardDefinition>(cards, StringComparer.Ordinal));
+            cards.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
     }
 
     public RuntimeEffectCatalog Effects { get; }

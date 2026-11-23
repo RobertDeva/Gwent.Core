@@ -30,7 +30,7 @@ public sealed class RuntimeTypeAnalyzer
             variables ?? new Dictionary<string, RuntimeType>(StringComparer.Ordinal), "card");
         if (actualType != expectedType && actualType != RuntimeType.Unknown)
             Add($"Expression expects '{expectedType}', but received '{actualType}'.");
-        return _diagnostics.AsReadOnly();
+        return _diagnostics.ToArray();
     }
 
     public IReadOnlyList<Diagnostic> Analyze(RuntimeEffectCatalog catalog)
