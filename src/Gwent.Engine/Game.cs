@@ -195,6 +195,7 @@ public sealed class Game
     private readonly Guid _id = Guid.NewGuid();
     private readonly HashSet<Player> _passedPlayers = [];
     private Player _roundStarter;
+    private bool _hasPlayedThisTurn;
 
     public Game(Player first, Player second)
     {
@@ -245,7 +246,9 @@ public sealed class Game
         if (card.OwnerId != player.Id || card.Zone != CardZone.Hand ||
             !player.Hand.Any(existing => existing.InstanceId == card.InstanceId))
             throw new InvalidOperationException("Only a card in the active player's hand can be played.");
+        if (_hasPlayedThisTurn) throw new InvalidOperationException("A player can play only one card per turn.");
         player.PlayFromHand(card);
+        _hasPlayedThisTurn = true;
     }
 
     public void Destroy(Player player, Card card)
@@ -274,6 +277,7 @@ public sealed class Game
         EnsureNotFinished();
         var other = Other(CurrentPlayer);
         if (!_passedPlayers.Contains(other)) CurrentPlayer = other;
+        _hasPlayedThisTurn = false;
     }
 
     public void Pass(Player player)
@@ -287,6 +291,7 @@ public sealed class Game
             return;
         }
         CurrentPlayer = other;
+        _hasPlayedThisTurn = false;
     }
 
     public static int Score(Player player)
@@ -328,6 +333,7 @@ public sealed class Game
         First.ClearFieldToGraveyard();
         Second.ClearFieldToGraveyard();
         _passedPlayers.Clear();
+        _hasPlayedThisTurn = false;
 
         IsFinished = FirstRoundsWon >= 2 || SecondRoundsWon >= 2 || RoundNumber >= 3;
         if (!IsFinished)

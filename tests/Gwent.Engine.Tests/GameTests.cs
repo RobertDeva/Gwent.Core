@@ -82,6 +82,23 @@ public sealed class GameTests
     }
 
     [Fact]
+    public void PlayerCanPlayOnlyOneCardPerTurn()
+    {
+        var first = new Player("first");
+        var game = new Game(first, new Player("second"));
+        var firstCard = new Card("first", "First", 4, Row.Melee);
+        var secondCard = new Card("second", "Second", 3, Row.Ranged);
+        game.AddToDeck(first, firstCard);
+        game.AddToDeck(first, secondCard);
+        game.Draw(first);
+        game.Draw(first);
+        game.Play(first, secondCard);
+
+        Assert.Throws<InvalidOperationException>(() => game.Play(first, firstCard));
+        Assert.Single(first.Field);
+    }
+
+    [Fact]
     public void PassingTwiceResolvesRoundAndAwardsRoundPoint()
     {
         var first = new Player("first");

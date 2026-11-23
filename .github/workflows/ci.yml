@@ -21,3 +21,5 @@ jobs:
         run: dotnet build Gwent.Core.sln --configuration Release
       - name: Run tests
         run: dotnet test Gwent.Core.sln --configuration Release --no-build
+      - name: Run console smoke test
+        run: dotnet run --project src/Gwent.Console --configuration Release --no-build
