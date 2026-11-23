@@ -68,7 +68,7 @@ public sealed class DslCompiler
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     private static readonly Regex EffectPattern = new(
-        @"^effect\s+(?<id>[A-Za-z_][A-Za-z0-9_]*)\s+boost\s+(?<amount>\d+)$",
+        @"^effect\s+(?<id>[A-Za-z_][A-Za-z0-9_]*)\s+boost\s+(?<amount>\d+)(?:\s+duration\s+(?<duration>instant|while-source-on-field))?(?:\s+operation\s+(?<operation>add|set|multiply))?(?:\s+target\s+(?<target>source|own-row|both-players-in-row))?$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     public CompilationResult Compile(string source)
