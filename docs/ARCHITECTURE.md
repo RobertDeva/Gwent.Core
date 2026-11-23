@@ -12,7 +12,7 @@ Gwent.Console ───────┐
 Gwent.Tests ─────────┘                    └──> Gwent.Engine
 ```
 
-The compiler translates source text into validated definitions and executable effect behavior. The engine owns game state and enforces all game rules. The console coordinates user input and renders results; it contains no game rules.
+The compiler translates source text into validated definitions and effect data. The engine owns game state and enforces all game rules. The console coordinates user input and renders results; it contains no game rules.
 
 ## Projects
 
@@ -26,7 +26,9 @@ The compiler translates source text into validated definitions and executable ef
 ## Core invariants
 
 - Every match owns its own board and zones; no mutable match state is static.
-- A card belongs to exactly one zone at a time.
+- A card definition describes a reusable template; each physical copy is a distinct card instance with its own identity and mutable state.
+- Multiple instances of the same definition may coexist in the same zone when game rules permit.
+- A card instance belongs to exactly one zone at a time.
 - Zone moves validate source membership, destination capacity, ownership, and nullability before mutation.
 - Score is derived from current board state through one authoritative calculation path.
 - Compiler diagnostics are scoped to one compilation; no mutable static error or execution state.

@@ -7,7 +7,8 @@ Se inspeccionó el árbol del repositorio histórico y se identificaron 117 arch
 ## Primera rebanada implementada
 
 - Solución .NET 10 con Engine, Compiler, Console y tres proyectos de pruebas.
-- Motor mínimo con instancias aisladas de partida, jugadores, cartas, movimiento al campo y puntuación.
+- Motor mínimo con instancias aisladas de partida, jugadores, definiciones de cartas representadas por identificadores y copias físicas independientes, movimiento al campo y puntuación.
+- Cada copia recibe un `InstanceId` propio y conserva el `DefinitionId` de su plantilla. Repetir una definición no implica repetir una instancia.
 - Compilador DSL inicial para declaraciones de cartas y efectos de aumento de potencia.
 - Ejecución del efecto compilado sobre una carta que ya pertenece a una partida.
 - Consola capaz de cargar un archivo DSL y mostrar puntuaciones y ganador.
@@ -17,4 +18,4 @@ Se inspeccionó el árbol del repositorio histórico y se identificaron 117 arch
 
 - La DSL v1 no implementa aún selectores, predicados, scopes, loops, post-actions ni operaciones de colecciones.
 - No hay mazos, mano, cementerio, rondas ni reglas completas de Gwent en esta primera rebanada.
-- No se ha ejecutado build ni tests en este entorno porque no dispone del SDK de .NET. GitHub Actions debe validar el primer build remoto.
+- No se ha ejecutado build ni tests en este entorno porque no dispone del SDK de .NET. GitHub Actions valida los cambios mediante build y pruebas remotas.

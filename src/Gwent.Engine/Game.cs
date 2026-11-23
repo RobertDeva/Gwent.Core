@@ -11,12 +11,16 @@ public enum Row
 
 public sealed class Card
 {
-    public Card(string id, string name, int power, Row row, string? effectId = null)
+    public Card(string definitionId, string name, int power, Row row, string? effectId = null)
     {
-        if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Card id is required.", nameof(id));
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Card name is required.", nameof(name));
+        if (string.IsNullOrWhiteSpace(definitionId))
+            throw new ArgumentException("Card definition id is required.", nameof(definitionId));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Card name is required.", nameof(name));
         if (power < 0) throw new ArgumentOutOfRangeException(nameof(power));
-        Id = id;
+
+        InstanceId = Guid.NewGuid();
+        DefinitionId = definitionId;
         Name = name;
         BasePower = power;
         Power = power;
@@ -24,7 +28,9 @@ public sealed class Card
         EffectId = effectId;
     }
 
-    public string Id { get; }
+    // InstanceId identifies this physical copy; DefinitionId identifies its shared template.
+    public Guid InstanceId { get; }
+    public string DefinitionId { get; }
     public string Name { get; }
     public int BasePower { get; }
     public int Power { get; private set; }
@@ -56,8 +62,8 @@ public sealed class Player
     internal void Add(Card card)
     {
         ArgumentNullException.ThrowIfNull(card);
-        if (_field.Any(existing => existing.Id == card.Id))
-            throw new InvalidOperationException($"Card '{card.Id}' is already on this player's field.");
+        if (_field.Any(existing => existing.InstanceId == card.InstanceId))
+            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is already on this player's field.");
         _field.Add(card);
     }
 }
@@ -91,9 +97,10 @@ public sealed class Game
         if (!ReferenceEquals(player, First) && !ReferenceEquals(player, Second))
             throw new InvalidOperationException("Player does not belong to this game.");
 
-        // A card instance represents one physical card and cannot occupy two fields.
-        if (First.Field.Contains(card) || Second.Field.Contains(card))
-            throw new InvalidOperationException($"Card '{card.Id}' is already in this game.");
+        // A physical copy may occupy only one place in a match.
+        if (First.Field.Any(existing => existing.InstanceId == card.InstanceId) ||
+            Second.Field.Any(existing => existing.InstanceId == card.InstanceId))
+            throw new InvalidOperationException($"Card instance '{card.InstanceId}' is already in this game.");
 
         player.Add(card);
     }

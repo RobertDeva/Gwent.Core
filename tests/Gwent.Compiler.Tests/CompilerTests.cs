@@ -57,4 +57,19 @@ public sealed class CompilerTests
             cards.Add("other", new CardDefinition("other", "Other", 1, Row.Melee, null)));
         Assert.Single(result.Cards);
     }
+
+    [Fact]
+    public void CardDefinitionCreatesDistinctInstances()
+    {
+        var result = new DslCompiler().Compile("""
+            card vanguard "Vanguard" power 4 row melee
+            """);
+        var definition = result.Cards["vanguard"];
+
+        var firstCopy = definition.CreateCard();
+        var secondCopy = definition.CreateCard();
+
+        Assert.NotEqual(firstCopy.InstanceId, secondCopy.InstanceId);
+        Assert.Equal(firstCopy.DefinitionId, secondCopy.DefinitionId);
+    }
 }
