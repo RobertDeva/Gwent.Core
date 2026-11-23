@@ -136,6 +136,53 @@ public sealed class RuntimeZoneCollectionTests
         Assert.Equal(new[] { second, first }, player.Hand);
     }
 
+
+    [Fact]
+    public void PushAndSendBottomPreserveOrderingInFieldCollections()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var first = new Card("first", "First", 1, Row.Melee);
+        var second = new Card("second", "Second", 2, Row.Melee);
+        game.AddToDeck(player, first);
+        game.AddToDeck(player, second);
+        game.MoveCard(first, player, CardZone.Field);
+        game.MoveCard(second, player, CardZone.Field);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        context.Scope.Define("first", RuntimeValue.From(first));
+        context.Scope.Define("second", RuntimeValue.From(second));
+
+        new ExpressionParser("context.Field.SendBottom(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { second, first }, player.Field);
+
+        new ExpressionParser("context.Field.Push(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { first, second }, player.Field);
+    }
+
+    [Fact]
+    public void PushAndSendBottomPreserveOrderingInGraveyardCollections()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var first = new Card("first", "First", 1, Row.Melee);
+        var second = new Card("second", "Second", 2, Row.Melee);
+        game.AddToDeck(player, first);
+        game.AddToDeck(player, second);
+        game.MoveCard(first, player, CardZone.Graveyard);
+        game.MoveCard(second, player, CardZone.Graveyard);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        context.Scope.Define("first", RuntimeValue.From(first));
+        context.Scope.Define("second", RuntimeValue.From(second));
+
+        new ExpressionParser("context.Graveyard.SendBottom(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { second, first }, player.Graveyard);
+
+        new ExpressionParser("context.Graveyard.Push(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { first, second }, player.Graveyard);
+    }
+
     [Fact]
     public void ShuffleUsesExecutionScopedRandomSource()
     {
