@@ -115,6 +115,25 @@ public sealed class RuntimeZoneCollectionTests
 
 
 
+
+    [Fact]
+    public void PopReadsTheCurrentContentsOfAZoneBoundCollection()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        var deck = RuntimeCardCollection.ForZone(context, player, CardZone.Deck);
+        var card = new Card("unit", "Unit", 1, Row.Melee);
+
+        game.AddToDeck(player, card);
+        var popped = deck.Pop();
+
+        Assert.Same(card, popped);
+        Assert.Equal(CardZone.Unassigned, card.Zone);
+        Assert.Empty(player.Deck);
+    }
+
     [Fact]
     public void ZoneBoundCollectionsReflectExternalZoneChanges()
     {

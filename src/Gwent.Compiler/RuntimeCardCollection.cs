@@ -124,8 +124,9 @@ public sealed class RuntimeCardCollection
     public Card? Pop()
     {
         EnsureMutable();
-        if (_cards.Count == 0) return null;
-        var card = _cards[^1];
+        var currentCards = Cards;
+        if (currentCards.Count == 0) return null;
+        var card = currentCards[^1];
         if (IsZoneBound)
             _context!.Game!.MoveCard(card, _owner!, CardZone.Unassigned);
         else
