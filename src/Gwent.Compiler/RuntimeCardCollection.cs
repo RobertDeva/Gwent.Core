@@ -1,5 +1,8 @@
 using Gwent.Engine;
 
+using System.Collections.ObjectModel;
+using Gwent.Engine;
+
 namespace Gwent.Compiler;
 
 /// <summary>

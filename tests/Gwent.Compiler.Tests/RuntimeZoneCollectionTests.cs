@@ -79,7 +79,7 @@ public sealed class RuntimeZoneCollectionTests
         new ExpressionParser("context.Deck.Shuffle()").Parse()!.Evaluate(context);
 
         Assert.Equal(8, player.Deck.Count);
-        Assert.NotEqual(cards.Select(card => card.InstanceId),
-            player.Deck.Select(card => card.InstanceId));
+        Assert.False(cards.Select(card => card.InstanceId)
+            .SequenceEqual(player.Deck.Select(card => card.InstanceId)));
     }
 }

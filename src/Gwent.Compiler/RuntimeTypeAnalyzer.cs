@@ -259,13 +259,28 @@ public sealed class RuntimeTypeAnalyzer
                 var receiver = Infer(method.Collection, variables, effectId);
                 if (receiver != RuntimeType.CardCollection && receiver != RuntimeType.Unknown)
                     Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires a card collection.");
-                foreach (var argument in method.Arguments)
-                    _ = Infer(argument, variables, effectId);
+                var argumentTypes = method.Arguments
+                    .Select(argument => Infer(argument, variables, effectId)).ToArray();
+                if (method.MethodName == "Find")
+                {
+                    if (argumentTypes.Length != 1 || argumentTypes[0] != RuntimeType.Lambda)
+                        Add($"Find in effect '{effectId}' requires one lambda predicate.");
+                    return RuntimeType.CardCollection;
+                }
+                if (method.MethodName is "Add" or "Push" or "SendBottom" or "Remove")
+                {
+                    if (argumentTypes.Length != 1 ||
+                        argumentTypes[0] != RuntimeType.Card && argumentTypes[0] != RuntimeType.Unknown)
+                        Add($"Collection operation '{method.MethodName}' in effect '{effectId}' requires one card argument.");
+                    return RuntimeType.CardCollection;
+                }
+                if (method.MethodName is "Pop" or "Count" or "Shuffle" && argumentTypes.Length != 0)
+                    Add($"Collection operation '{method.MethodName}' in effect '{effectId}' does not accept arguments.");
                 return method.MethodName switch
                 {
-                    "Find" or "Add" or "Push" or "SendBottom" or "Remove" => RuntimeType.CardCollection,
                     "Pop" => RuntimeType.Card,
                     "Count" => RuntimeType.Number,
+                    "Shuffle" => RuntimeType.CardCollection,
                     _ => UnknownCollectionMethod(method.MethodName, effectId)
                 };
             default:

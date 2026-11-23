@@ -27,6 +27,6 @@ public sealed class AssignmentExpressionTests
 
         Assert.Null(parser.Parse());
         Assert.Contains(parser.Diagnostics, diagnostic =>
-            diagnostic.Message.Contains("Only variables", StringComparison.Ordinal));
+            diagnostic.Message.Contains("Assignments are supported", StringComparison.Ordinal));
     }
 }
