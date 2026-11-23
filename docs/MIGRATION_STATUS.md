@@ -24,11 +24,12 @@
 - End-to-end DSL execution is covered by integration tests; current CI passes the complete build, test suite, and console smoke test.
 - Runtime DSL effect bodies are semantically analyzed during compilation, including identifier resolution, assignment compatibility, expression types, loop scopes, and boolean Find predicates. Program compilation aggregates effect-body and activation diagnostics before publishing an executable program.
 - Legacy card member semantics are represented explicitly: Owner resolves to a Player, OwnerId remains available as a string, Range exposes the allowed row names as a read-only indexed collection, and Row identifies the chosen instance row.
+- Runtime card catalogs and activation argument maps are immutable snapshots; duplicate card fields, duplicate activation/selector fields, duplicate allowed rows, and blank required card metadata are rejected during compilation.
 
 ## Remaining
 
 - The compatibility grammar still supports card/effect declarations and simple boost metadata. The extended runtime DSL supports both a single combined source file and separate effect/card source inputs through DslCompiler.CompileRuntimeProgram.
-- Collection behavior still requires broader compatibility testing against the historical runtime, especially ordering semantics for Push/SendBottom/Pop, mutations during iteration, and edge cases when a card is detached from a zone.
+- Collection semantics are integrated and tested for deck/hand ordering, removal, Pop/Push/SendBottom, and mutation-safe iteration; broader parity testing remains for other zones and combinations of operations.
 - Player-driven console interaction, initial hand/deck construction rules, and complete acceptance scenario.
 - Card rank/type filtering (for example, weather affecting only the appropriate unit ranks), special-card zones, leader effects, round-persistence exceptions, and complete tie/round rules remain to be specified and implemented.
 - The historical first project also contains temporary unit statuses (buff/debuff) reset at round cleanup; these must be modeled separately from source-bound row auras.
