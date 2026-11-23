@@ -242,9 +242,14 @@ public sealed class RuntimeTypeAnalyzer
                     Add($"Increment/decrement in effect '{effectId}' requires a numeric variable.");
                 return RuntimeType.Number;
             case AssignmentExpression assignment:
-                if (!variables.ContainsKey(assignment.Name))
+                var assignedValueType = Infer(assignment.ValueExpression, variables, effectId);
+                if (!variables.TryGetValue(assignment.Name, out var declaredVariableType))
                     Add($"Unknown identifier '{assignment.Name}' in effect '{effectId}'.");
-                return Infer(assignment.ValueExpression, variables, effectId);
+                else if (declaredVariableType != RuntimeType.Unknown &&
+                         assignedValueType != RuntimeType.Unknown &&
+                         declaredVariableType != assignedValueType)
+                    Add($"Cannot assign '{assignedValueType}' to variable '{assignment.Name}' of type '{declaredVariableType}'.");
+                return assignedValueType;
             case CardPowerAssignmentExpression assignment:
                 var targetType = Infer(assignment.Target, variables, effectId);
                 var valueType = Infer(assignment.ValueExpression, variables, effectId);

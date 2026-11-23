@@ -76,6 +76,24 @@ public sealed class RuntimeEffectCompilerTests
         Assert.Empty(diagnostics);
     }
 
+
+    [Fact]
+    public void RejectsAssignmentsThatChangeVariableType()
+    {
+        var effect = new RuntimeEffectDefinition("assign", [], [
+            new DefineVariableStatement("counter",
+                new LiteralExpression(RuntimeValue.From(1))),
+            new EvaluateStatement(new AssignmentExpression("counter",
+                new LiteralExpression(RuntimeValue.From("one"))))
+        ]);
+
+        var diagnostics = new RuntimeTypeAnalyzer().Analyze(new RuntimeEffectCatalog([effect]));
+
+        Assert.Contains(diagnostics, diagnostic =>
+            diagnostic.Message.Contains("Cannot assign", StringComparison.Ordinal) &&
+            diagnostic.Message.Contains("counter", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ReportsDuplicateEffectIdentifiers()
     {
