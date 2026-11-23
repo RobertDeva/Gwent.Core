@@ -33,8 +33,7 @@ for (var turn = 0; turn < 2; turn++)
     if (card is not null)
     {
         game.Play(player, card);
-        if (card.EffectId is not null)
-            game.ApplyEffect(player, card, compilation.Effects[card.EffectId].ToEngineEffect());
+        compilation.ApplyCardEffect(game, player, card);
 
         Console.WriteLine($"{player.Id}: {card.Name} ({card.Row}, {card.Power} power)");
     }
