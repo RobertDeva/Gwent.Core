@@ -271,7 +271,15 @@ public sealed class RuntimeEffectParser
         return true;
     }
 
-    private Token Current => _tokens[Math.Min(_position, _tokens.Count - 1)];
+    private Token Current
+    {
+        get
+        {
+            while (_position < _tokens.Count - 1 && _tokens[_position].Kind == TokenKind.NewLine)
+                _position++;
+            return _tokens[Math.Min(_position, _tokens.Count - 1)];
+        }
+    }
     private Token Previous => _tokens[Math.Max(0, _position - 1)];
     private Token Advance()
     {
