@@ -66,7 +66,7 @@ public sealed class Lexer
         var line = _line;
         var column = _column;
         var first = Current;
-        var second = _position + 1 < _source.Length ? _source[_position + 1] : '\\0';
+        var second = _position + 1 < _source.Length ? _source[_position + 1] : '\0';
         TokenKind? kind = first switch
         {
             ':' => TokenKind.Colon,
