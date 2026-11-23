@@ -133,11 +133,7 @@ public sealed class RuntimeCardCollection
         EnsureMutable();
         ArgumentNullException.ThrowIfNull(random);
         if (IsZoneBound)
-        {
-            if (_zone != CardZone.Deck)
-                throw new InvalidOperationException("Only a deck collection can be shuffled.");
-            _context!.Game!.ShuffleDeck(_owner!, random);
-        }
+            _context!.Game!.ShuffleZone(_owner!, _zone!.Value, random);
         else
         {
             for (var i = _cards.Count - 1; i > 0; i--)

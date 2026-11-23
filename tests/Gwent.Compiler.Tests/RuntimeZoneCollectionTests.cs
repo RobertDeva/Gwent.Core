@@ -221,6 +221,41 @@ public sealed class RuntimeZoneCollectionTests
         Assert.Equal(new[] { first, second }, player.Graveyard);
     }
 
+
+    [Fact]
+    public void ShuffleSupportsEveryAssignedPlayerZone()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var cards = Enumerable.Range(0, 4)
+            .Select(index => new Card($"unit-{index}", $"Unit {index}", index + 1, Row.Melee))
+            .ToArray();
+        foreach (var card in cards)
+        {
+            game.AddToDeck(player, card);
+            game.Draw(player);
+        }
+
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+
+        new ExpressionParser("context.Hand.Shuffle()").Parse()!.Evaluate(context);
+        Assert.Equal(4, player.Hand.Count);
+        Assert.All(cards, card => Assert.Contains(card, player.Hand));
+
+        foreach (var card in cards)
+            game.MoveCard(card, player, CardZone.Field);
+        new ExpressionParser("context.Field.Shuffle()").Parse()!.Evaluate(context);
+        Assert.Equal(4, player.Field.Count);
+        Assert.All(cards, card => Assert.Contains(card, player.Field));
+
+        foreach (var card in cards)
+            game.MoveCard(card, player, CardZone.Graveyard);
+        new ExpressionParser("context.Graveyard.Shuffle()").Parse()!.Evaluate(context);
+        Assert.Equal(4, player.Graveyard.Count);
+        Assert.All(cards, card => Assert.Contains(card, player.Graveyard));
+    }
+
     [Fact]
     public void ShuffleUsesExecutionScopedRandomSource()
     {

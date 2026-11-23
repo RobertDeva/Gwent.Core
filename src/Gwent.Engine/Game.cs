@@ -286,6 +286,20 @@ public sealed class Board
         else row.Insert(0, card);
     }
 
+    internal void Shuffle(Random random)
+    {
+        foreach (var row in _rows.Values) ShuffleList(row, random);
+    }
+
+    private static void ShuffleList(List<Card> cards, Random random)
+    {
+        for (var i = cards.Count - 1; i > 0; i--)
+        {
+            var j = random.Next(i + 1);
+            (cards[i], cards[j]) = (cards[j], cards[i]);
+        }
+    }
+
     internal void Remove(Card card)
     {
         var row = _rows[card.Row];
@@ -416,13 +430,27 @@ public sealed class Player
         InsertByPosition(cards, card, position);
     }
 
-    internal void ShuffleDeck(Random random)
+    internal void ShuffleZone(CardZone zone, Random random)
     {
         ArgumentNullException.ThrowIfNull(random);
-        for (var i = _deck.Count - 1; i > 0; i--)
+        switch (zone)
+        {
+            case CardZone.Deck: ShuffleList(_deck, random); break;
+            case CardZone.Hand: ShuffleList(_hand, random); break;
+            case CardZone.Field: Board.Shuffle(random); break;
+            case CardZone.Graveyard: ShuffleList(_graveyard, random); break;
+            default: throw new ArgumentOutOfRangeException(nameof(zone), "Only assigned player zones can be shuffled.");
+        }
+    }
+
+    internal void ShuffleDeck(Random random) => ShuffleZone(CardZone.Deck, random);
+
+    private static void ShuffleList(List<Card> cards, Random random)
+    {
+        for (var i = cards.Count - 1; i > 0; i--)
         {
             var j = random.Next(i + 1);
-            (_deck[i], _deck[j]) = (_deck[j], _deck[i]);
+            (cards[i], cards[j]) = (cards[j], cards[i]);
         }
     }
 
@@ -588,11 +616,16 @@ public sealed class Game
         RefreshPersistentEffects();
     }
 
-    public void ShuffleDeck(Player player, Random random)
+    public void ShuffleDeck(Player player, Random random) =>
+        ShuffleZone(player, CardZone.Deck, random);
+
+    public void ShuffleZone(Player player, CardZone zone, Random random)
     {
         EnsureNotFinished();
         ValidatePlayer(player);
-        player.ShuffleDeck(random);
+        if (!Enum.IsDefined(zone) || zone == CardZone.Unassigned)
+            throw new ArgumentOutOfRangeException(nameof(zone));
+        player.ShuffleZone(zone, random);
     }
 
     public void ValidateCardZones()
