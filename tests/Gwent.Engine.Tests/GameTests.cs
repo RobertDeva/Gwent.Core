@@ -203,10 +203,10 @@ public sealed class GameTests
         var secondUnit = new Card("second-unit", "Second unit", 4, Row.Melee);
         var laterUnit = new Card("later-unit", "Later unit", 6, Row.Melee);
 
-        game.AddToDeck(first, weather);
         game.AddToDeck(first, firstUnit);
-        game.AddToDeck(second, secondUnit);
+        game.AddToDeck(first, weather);
         game.AddToDeck(second, laterUnit);
+        game.AddToDeck(second, secondUnit);
         game.Draw(first);
         game.Play(first, weather);
         game.ApplyEffect(first, weather, new CardEffect(
@@ -216,7 +216,7 @@ public sealed class GameTests
         game.Draw(second);
         game.Play(second, secondUnit);
 
-        Assert.Equal(1, first.Board.Score);
+        Assert.Equal(0, first.Board.Score);
         Assert.Equal(1, second.Board.Score);
 
         game.EndTurn();
@@ -234,8 +234,8 @@ public sealed class GameTests
         var game = new Game(first, second);
         var source = new Card("horn", "Horn", 0, Row.Ranged, "aura");
         var unit = new Card("unit", "Unit", 5, Row.Ranged);
-        game.AddToDeck(first, source);
         game.AddToDeck(first, unit);
+        game.AddToDeck(first, source);
         game.Draw(first);
         game.Play(first, source);
         game.ApplyEffect(first, source, new CardEffect(

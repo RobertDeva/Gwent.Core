@@ -397,7 +397,7 @@ public sealed class Game
         if (effect.TargetScope == EffectTargetScope.SourceCard)
             return [source];
 
-        var owner = ReferenceEquals(source.OwnerId, First.Id) ? First : Second;
+        var owner = StringComparer.Ordinal.Equals(source.OwnerId, First.Id) ? First : Second;
         var candidates = effect.TargetScope == EffectTargetScope.OwnRow
             ? owner.Field
             : First.Field.Concat(Second.Field).ToArray();
@@ -429,6 +429,7 @@ public sealed class Game
             _roundStarter = ReferenceEquals(_roundStarter, First) ? Second : First;
         }
 
+        foreach (var card in First.Field.Concat(Second.Field)) card.RemovePersistentModifiers();
         _activeEffects.Clear();
         First.ClearFieldToGraveyard();
         Second.ClearFieldToGraveyard();
