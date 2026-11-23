@@ -71,6 +71,15 @@ public sealed class RuntimeCardProgramCompiler
                 continue;
             }
 
+            if (string.IsNullOrWhiteSpace(card.Name))
+                diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' must have a non-empty Name."));
+            if (string.IsNullOrWhiteSpace(card.Faction))
+                diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' must have a non-empty Faction."));
+            if (string.IsNullOrWhiteSpace(card.Type))
+                diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' must have a non-empty Type."));
+            if (string.IsNullOrWhiteSpace(card.Rank))
+                diagnostics.Add(new Diagnostic(1, $"Card '{card.Id}' must have a non-empty Rank."));
+
             diagnostics.AddRange(typeAnalyzer.AnalyzeExpression(card.Power, RuntimeType.Number));
             try
             {

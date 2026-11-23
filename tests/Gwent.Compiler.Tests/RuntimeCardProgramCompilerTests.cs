@@ -75,6 +75,33 @@ public sealed class RuntimeCardProgramCompilerTests
             diagnostic.Message.Contains("declares range", StringComparison.Ordinal));
     }
 
+
+    [Fact]
+    public void RejectsBlankRequiredCardMetadataBeforeInstanceCreation()
+    {
+        var cards = """
+            card unit {
+                Name: "";
+                Power: 1;
+                Faction: "";
+                Type: "";
+                Rank: "";
+                Range: ["Melee"];
+                description: "";
+                OnActivation: [];
+            }
+            """;
+
+        var result = new RuntimeCardProgramCompiler().Compile(Effects, cards);
+
+        Assert.False(result.Success);
+        Assert.Null(result.Program);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("non-empty Name", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("non-empty Faction", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("non-empty Type", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("non-empty Rank", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void RejectsCardActivationReferencingUnknownEffect()
     {
