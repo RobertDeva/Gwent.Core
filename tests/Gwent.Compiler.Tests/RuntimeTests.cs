@@ -67,6 +67,53 @@ public sealed class RuntimeTests
     }
 
     [Fact]
+    public void ExecutionBudgetStopsUnboundedRuntimeWork()
+    {
+        var context = new RuntimeExecutionContext(
+            new Gwent.Engine.Player("p1"),
+            new Gwent.Engine.Card("unit", "Unit", 3, Gwent.Engine.Row.Melee),
+            instructionLimit: 2);
+
+        context.ConsumeInstruction();
+        context.ConsumeInstruction();
+
+        Assert.Equal(2, context.InstructionsExecuted);
+        Assert.Throws<InvalidOperationException>(() => context.ConsumeInstruction());
+    }
+
+    [Fact]
+    public void ExecutionContextsDoNotShareScopesOrInstructionCounters()
+    {
+        var player = new Gwent.Engine.Player("p1");
+        var card = new Gwent.Engine.Card("unit", "Unit", 3, Gwent.Engine.Row.Melee);
+        var first = new RuntimeExecutionContext(player, card);
+        var second = new RuntimeExecutionContext(player, card);
+        first.Scope.Define("temporary", RuntimeValue.From(1));
+        first.ConsumeInstruction();
+
+        Assert.False(second.Scope.TryResolve("temporary", out _));
+        Assert.Equal(0, second.InstructionsExecuted);
+    }
+
+    [Fact]
+    public void ExecutionScopesCanBeEnteredAndExitedSafely()
+    {
+        var context = new RuntimeExecutionContext(
+            new Gwent.Engine.Player("p1"),
+            new Gwent.Engine.Card("unit", "Unit", 3, Gwent.Engine.Row.Melee));
+        context.Scope.Define("outer", RuntimeValue.From(1));
+        context.EnterScope();
+        context.Scope.Define("inner", RuntimeValue.From(2));
+
+        Assert.Equal(1, context.Scope.Resolve("outer").AsNumber());
+        Assert.Equal(2, context.Scope.Resolve("inner").AsNumber());
+        context.ExitScope();
+
+        Assert.Throws<KeyNotFoundException>(() => context.Scope.Resolve("inner"));
+        Assert.Throws<InvalidOperationException>(() => context.ExitScope());
+    }
+
+    [Fact]
     public void CardCollectionsAreDefensiveSnapshots()
     {
         var card = new Gwent.Engine.Card("unit", "Unit", 3, Gwent.Engine.Row.Melee);
