@@ -52,7 +52,7 @@ public enum RuntimeBinaryOperator
 {
     Add, Subtract, Multiply, Divide, Modulo, Power,
     Equal, NotEqual, Greater, GreaterOrEqual, Less, LessOrEqual,
-    And, Or, Concatenate
+    And, Or, Concatenate, ConcatenateWithSpace
 }
 
 public sealed record BinaryExpression(
