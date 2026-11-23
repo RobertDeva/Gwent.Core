@@ -207,6 +207,35 @@ public sealed class RuntimeCardProgramCompilerTests
         Assert.Throws<ArgumentException>(() => program.Activate(card, 0, context));
     }
 
+
+    [Fact]
+    public void SameCompiledDefinitionCreatesDistinctPhysicalCardInstances()
+    {
+        var cards = """
+            card unit {
+                Name: "Unit";
+                Power: 4;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee", "Range"];
+                description: "Unit";
+                OnActivation: [];
+            }
+            """;
+        var result = new RuntimeCardProgramCompiler().Compile(Effects, cards);
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+
+        var first = result.Program!.CreateCardInstance("unit", Row.Melee);
+        var second = result.Program.CreateCardInstance("unit", Row.Ranged);
+
+        Assert.Equal(first.DefinitionId, second.DefinitionId);
+        Assert.NotEqual(first.InstanceId, second.InstanceId);
+        Assert.NotSame(first, second);
+        Assert.Equal(Row.Melee, first.Row);
+        Assert.Equal(Row.Ranged, second.Row);
+    }
+
     [Fact]
     public void RejectsCardActivationReferencingUnknownEffect()
     {
