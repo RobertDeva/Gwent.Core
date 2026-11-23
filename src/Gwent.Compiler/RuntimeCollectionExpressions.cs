@@ -22,61 +22,52 @@ public sealed record CollectionMethodExpression(
     public override RuntimeValue Evaluate(RuntimeExecutionContext context)
     {
         context.ConsumeInstruction();
-        var cards = Collection.Evaluate(context).AsCards().ToList();
+        var collection = Collection.Evaluate(context).AsCardCollection();
 
         switch (MethodName)
         {
             case "Find":
-                RequireArgumentCount(Arguments, 1);
+                RequireArgumentCount(1);
                 var predicate = Arguments[0].Evaluate(context).AsLambda();
-                return RuntimeValue.FromCards(cards.Where(card =>
+                return RuntimeValue.FromCards(collection.Cards.Where(card =>
                     predicate.Invoke(context, RuntimeValue.From(card)).AsBoolean()));
             case "Add":
-                RequireArgumentCount(Arguments, 1);
-                cards.Add(Arguments[0].Evaluate(context).AsCard());
+                RequireArgumentCount(1);
+                collection.Add(Arguments[0].Evaluate(context).AsCard());
                 break;
             case "Push":
-                RequireArgumentCount(Arguments, 1);
-                MoveToEnd(cards, Arguments[0].Evaluate(context).AsCard());
+                RequireArgumentCount(1);
+                collection.Push(Arguments[0].Evaluate(context).AsCard());
                 break;
             case "SendBottom":
-                RequireArgumentCount(Arguments, 1);
-                MoveToBeginning(cards, Arguments[0].Evaluate(context).AsCard());
+                RequireArgumentCount(1);
+                collection.SendBottom(Arguments[0].Evaluate(context).AsCard());
                 break;
             case "Remove":
-                RequireArgumentCount(Arguments, 1);
-                var removed = Arguments[0].Evaluate(context).AsCard();
-                cards.RemoveAll(card => card.InstanceId == removed.InstanceId);
+                RequireArgumentCount(1);
+                collection.Remove(Arguments[0].Evaluate(context).AsCard());
                 break;
             case "Pop":
-                RequireArgumentCount(Arguments, 0);
-                if (cards.Count == 0) return RuntimeValue.Null();
-                return RuntimeValue.From(cards[^1]);
+                RequireArgumentCount(0);
+                var popped = collection.Pop();
+                return popped is null ? RuntimeValue.Null() : RuntimeValue.From(popped);
+            case "Shuffle":
+                RequireArgumentCount(0);
+                collection.Shuffle(context.Random);
+                break;
             case "Count":
-                RequireArgumentCount(Arguments, 0);
-                return RuntimeValue.From(cards.Count);
+                RequireArgumentCount(0);
+                return RuntimeValue.From(collection.Count);
             default:
                 throw new InvalidOperationException($"Unknown collection operation '{MethodName}'.");
         }
 
-        return RuntimeValue.FromCards(cards);
+        return RuntimeValue.FromCardCollection(collection);
     }
 
-    private static void MoveToEnd(List<Gwent.Engine.Card> cards, Gwent.Engine.Card card)
+    private void RequireArgumentCount(int expected)
     {
-        cards.RemoveAll(existing => existing.InstanceId == card.InstanceId);
-        cards.Add(card);
-    }
-
-    private static void MoveToBeginning(List<Gwent.Engine.Card> cards, Gwent.Engine.Card card)
-    {
-        cards.RemoveAll(existing => existing.InstanceId == card.InstanceId);
-        cards.Insert(0, card);
-    }
-
-    private static void RequireArgumentCount(IReadOnlyCollection<RuntimeExpression> values, int expected)
-    {
-        if (values.Count != expected)
-            throw new ArgumentException($"Expected {expected} collection argument(s), received {values.Count}.");
+        if (Arguments.Count != expected)
+            throw new ArgumentException($"Expected {expected} collection argument(s), received {Arguments.Count}.");
     }
 }

@@ -12,7 +12,7 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         return target.Kind switch
         {
             RuntimeValueKind.Card => ReadCard(target.AsCard()),
-            RuntimeValueKind.Player => ReadPlayer(target.AsPlayer()),
+            RuntimeValueKind.Player => ReadPlayer(target.AsPlayer(), context),
             RuntimeValueKind.Game => ReadGame(target.AsGame()),
             RuntimeValueKind.ExecutionContext => ReadContext(target.AsContext()),
             _ => throw new InvalidOperationException(
@@ -31,14 +31,14 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         _ => throw UnknownMember()
     };
 
-    private RuntimeValue ReadPlayer(Player player) => MemberName switch
+    private RuntimeValue ReadPlayer(Player player, RuntimeExecutionContext context) => MemberName switch
     {
         "Id" => RuntimeValue.From(player.Id),
-        "Hand" => RuntimeValue.FromCards(player.Hand),
-        "Deck" => RuntimeValue.FromCards(player.Deck),
-        "Field" => RuntimeValue.FromCards(player.Field),
-        "Graveyard" => RuntimeValue.FromCards(player.Graveyard),
-        "Board" => RuntimeValue.FromCards(player.Board.Cards),
+        "Hand" => RuntimeValue.FromZoneCards(context, player, CardZone.Hand),
+        "Deck" => RuntimeValue.FromZoneCards(context, player, CardZone.Deck),
+        "Field" => RuntimeValue.FromZoneCards(context, player, CardZone.Field),
+        "Graveyard" => RuntimeValue.FromZoneCards(context, player, CardZone.Graveyard),
+        "Board" => RuntimeValue.FromZoneCards(context, player, CardZone.Field),
         _ => throw UnknownMember()
     };
 
@@ -60,16 +60,16 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "TriggerPlayer" => RuntimeValue.From(context.TriggerPlayer),
         "SourceCard" => RuntimeValue.From(context.SourceCard),
         "Game" => context.Game is null ? RuntimeValue.Null() : RuntimeValue.From(context.Game!),
-        "Hand" => RuntimeValue.FromCards(context.TriggerPlayer.Hand),
-        "Deck" => RuntimeValue.FromCards(context.TriggerPlayer.Deck),
-        "Field" => RuntimeValue.FromCards(context.TriggerPlayer.Field),
-        "Graveyard" => RuntimeValue.FromCards(context.TriggerPlayer.Graveyard),
+        "Hand" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Hand),
+        "Deck" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Deck),
+        "Field" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Field),
+        "Graveyard" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Graveyard),
         "Board" => RuntimeValue.FromCards(context.Game is null
             ? context.TriggerPlayer.Field
             : context.Game.First.Field.Concat(context.Game.Second.Field)),
-        "OtherHand" => RuntimeValue.FromCards(OtherPlayer(context).Hand),
-        "OtherDeck" => RuntimeValue.FromCards(OtherPlayer(context).Deck),
-        "OtherField" => RuntimeValue.FromCards(OtherPlayer(context).Field),
+        "OtherHand" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Hand),
+        "OtherDeck" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Deck),
+        "OtherField" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Field),
         _ => throw UnknownMember()
     };
 

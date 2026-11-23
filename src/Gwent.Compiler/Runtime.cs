@@ -39,8 +39,13 @@ public sealed class RuntimeValue
     {
         ArgumentNullException.ThrowIfNull(value);
         return new RuntimeValue(RuntimeValueKind.CardCollection,
-            Array.AsReadOnly(value.ToArray()));
+            new RuntimeCardCollection(value));
     }
+    public static RuntimeValue FromCardCollection(RuntimeCardCollection value) =>
+        new(RuntimeValueKind.CardCollection, value ?? throw new ArgumentNullException(nameof(value)));
+    public static RuntimeValue FromZoneCards(
+        RuntimeExecutionContext context, Player owner, CardZone zone) =>
+        new(RuntimeValueKind.CardCollection, RuntimeCardCollection.ForZone(context, owner, zone));
     public static RuntimeValue From(RuntimeLambda value) =>
         new(RuntimeValueKind.Lambda, value ?? throw new ArgumentNullException(nameof(value)));
     public static RuntimeValue From(Player value) =>
@@ -66,8 +71,10 @@ public sealed class RuntimeValue
         ? (Card)Value!
         : throw TypeError(RuntimeValueKind.Card);
 
-    public IReadOnlyList<Card> AsCards() => Kind == RuntimeValueKind.CardCollection
-        ? (IReadOnlyList<Card>)Value!
+    public IReadOnlyList<Card> AsCards() => AsCardCollection().Cards;
+
+    public RuntimeCardCollection AsCardCollection() => Kind == RuntimeValueKind.CardCollection
+        ? (RuntimeCardCollection)Value!
         : throw TypeError(RuntimeValueKind.CardCollection);
 
     public RuntimeLambda AsLambda() => Kind == RuntimeValueKind.Lambda
@@ -160,7 +167,8 @@ public sealed class RuntimeExecutionContext
         Player triggerPlayer,
         Card sourceCard,
         Game? game = null,
-        int instructionLimit = 10_000)
+        int instructionLimit = 10_000,
+        Random? random = null)
     {
         TriggerPlayer = triggerPlayer ?? throw new ArgumentNullException(nameof(triggerPlayer));
         SourceCard = sourceCard ?? throw new ArgumentNullException(nameof(sourceCard));
@@ -172,6 +180,7 @@ public sealed class RuntimeExecutionContext
             throw new ArgumentOutOfRangeException(nameof(instructionLimit));
 
         InstructionLimit = instructionLimit;
+        Random = random ?? new Random();
         Scope = new RuntimeScope();
         Scope.Define("context", RuntimeValue.From(this));
     }
@@ -180,6 +189,7 @@ public sealed class RuntimeExecutionContext
     public Card SourceCard { get; }
     public Game? Game { get; }
     public int InstructionLimit { get; }
+    public Random Random { get; }
     public int InstructionsExecuted => _instructionsExecuted;
     public RuntimeScope Scope { get; private set; }
 
