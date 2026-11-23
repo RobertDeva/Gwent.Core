@@ -12,6 +12,7 @@ public sealed record LiteralExpression(RuntimeValue Literal) : RuntimeExpression
     public override RuntimeValue Evaluate(RuntimeExecutionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        context.ConsumeInstruction();
         return Literal ?? throw new InvalidOperationException("Literal value is missing.");
     }
 }
@@ -21,6 +22,7 @@ public sealed record VariableExpression(string Name) : RuntimeExpression
     public override RuntimeValue Evaluate(RuntimeExecutionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        context.ConsumeInstruction();
         return context.Scope.Resolve(Name);
     }
 }
@@ -39,6 +41,7 @@ public sealed record CardPropertyExpression(RuntimeExpression Target, CardProper
 {
     public override RuntimeValue Evaluate(RuntimeExecutionContext context)
     {
+        context.ConsumeInstruction();
         var card = Target.Evaluate(context).AsCard();
         return Property switch
         {
@@ -79,6 +82,7 @@ public sealed record BinaryExpression(
     public override RuntimeValue Evaluate(RuntimeExecutionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        context.ConsumeInstruction();
         var left = Left.Evaluate(context);
 
         if (Operator == RuntimeBinaryOperator.And && !left.AsBoolean())
@@ -94,7 +98,7 @@ public sealed record BinaryExpression(
             RuntimeBinaryOperator.Multiply => RuntimeValue.From(checked(left.AsNumber() * right.AsNumber())),
             RuntimeBinaryOperator.Divide => RuntimeValue.From(left.AsNumber() / right.AsNumber()),
             RuntimeBinaryOperator.Modulo => RuntimeValue.From(left.AsNumber() % right.AsNumber()),
-            RuntimeBinaryOperator.Power => RuntimeValue.From(Power(left.AsNumber(), right.AsNumber())),
+            RuntimeBinaryOperator.Power => RuntimeValue.From(Power(left.AsNumber(), right.AsNumber(), context)),
             RuntimeBinaryOperator.Equal => RuntimeValue.From(Equals(left.Value, right.Value)),
             RuntimeBinaryOperator.NotEqual => RuntimeValue.From(!Equals(left.Value, right.Value)),
             RuntimeBinaryOperator.Greater => RuntimeValue.From(left.AsNumber() > right.AsNumber()),
@@ -108,11 +112,11 @@ public sealed record BinaryExpression(
         };
     }
 
-    private static int Power(int value, int exponent)
+    private static int Power(int value, int exponent, RuntimeExecutionContext context)
     {
         if (exponent < 0) throw new ArgumentOutOfRangeException(nameof(exponent), "Exponent cannot be negative.");
         var result = 1;
-        for (var i = 0; i < exponent; i++) result = checked(result * value);
+        for (var i = 0; i < exponent; i++)\n        {\n            context.ConsumeInstruction();\n            result = checked(result * value);\n        }
         return result;
     }
 }
