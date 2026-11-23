@@ -25,6 +25,22 @@ public sealed class RuntimeContextMemberTests
         Assert.Equal(4, expression!.Evaluate(context).AsNumber());
     }
 
+
+    [Fact]
+    public void ExposesOtherPlayerAsATypedContextMember()
+    {
+        var first = new Player("p1");
+        var second = new Player("p2");
+        var game = new Game(first, second);
+        var context = new RuntimeExecutionContext(
+            first, new Card("source", "Source", 1, Row.Melee), game);
+        var parser = new ExpressionParser("context.OtherPlayer.Id");
+        var expression = parser.Parse();
+
+        Assert.Empty(parser.Diagnostics);
+        Assert.Equal("p2", expression!.Evaluate(context).AsString());
+    }
+
     [Fact]
     public void ExposesOpponentCollectionsOnlyWhenGameContextExists()
     {

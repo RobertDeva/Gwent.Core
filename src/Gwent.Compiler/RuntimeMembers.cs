@@ -61,6 +61,7 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
     private RuntimeValue ReadContext(RuntimeExecutionContext context) => MemberName switch
     {
         "TriggerPlayer" => RuntimeValue.From(context.TriggerPlayer),
+        "OtherPlayer" => RuntimeValue.From(OtherPlayer(context)),
         "SourceCard" => RuntimeValue.From(context.SourceCard),
         "Game" => context.Game is null ? RuntimeValue.Null() : RuntimeValue.From(context.Game!),
         "Hand" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Hand),

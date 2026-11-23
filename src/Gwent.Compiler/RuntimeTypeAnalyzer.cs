@@ -218,7 +218,9 @@ public sealed class RuntimeTypeAnalyzer
                 Add($"Unknown identifier '{variable.Name}' in effect '{effectId}'.");
                 return RuntimeType.Unknown;
             case CardPropertyExpression property:
-                _ = Infer(property.Target, variables, effectId);
+                var propertyTargetType = Infer(property.Target, variables, effectId);
+                if (propertyTargetType != RuntimeType.Card && propertyTargetType != RuntimeType.Unknown)
+                    Add($"Card property '{property.Property}' in effect '{effectId}' requires a card target.");
                 return property.Property switch
                 {
                     CardProperty.Power => RuntimeType.Number,
