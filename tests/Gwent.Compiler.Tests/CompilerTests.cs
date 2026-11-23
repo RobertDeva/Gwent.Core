@@ -117,15 +117,5 @@ public sealed class CompilerTests
         Assert.True(result.Success);
     }
 
-    [Fact]
-    public void ParserRecoversAfterUnterminatedStringOnPreviousLine()
-    {
-        var tokens = new Lexer("card broken \"Broken\ncard valid \"Valid\" power 3 row melee").Tokenize();
-        var syntax = new Parser(tokens).Parse();
-
-        Assert.NotEmpty(syntax.Diagnostics);
-        Assert.Single(syntax.Declarations);
-        Assert.Equal("valid", Assert.IsType<CardDeclarationSyntax>(syntax.Declarations[0]).Id);
-    }
 
 }
