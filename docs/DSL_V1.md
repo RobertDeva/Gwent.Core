@@ -22,6 +22,14 @@ card <identifier> "<display name>" power <non-negative-integer> row <melee|range
 - `target source` afecta solo a la carta fuente; `own-row` afecta a las demás cartas de su fila y propietario; `both-players-in-row` afecta a las demás cartas de esa fila en ambos campos.
 - Los efectos persistentes se recalculan al cambiar el campo y se retiran cuando sale su fuente o termina la ronda. El sistema de filtrado por tipo/rango de carta todavía no está implementado.
 
+## Integración con el motor
+
+El resultado de compilación es el catálogo autorizado para crear instancias y aplicar sus efectos:
+
+- `CardDefinition.CreateCard()` crea una instancia física nueva; las copias comparten definición, no identidad.
+- `CompilationResult.ApplyCardEffect(game, player, card)` comprueba que la instancia coincide con una definición del catálogo y aplica el efecto asociado a través de la API del motor.
+- El método devuelve `false` cuando la carta no declara efecto y `true` cuando lo aplica. Las restricciones de turno, zona y duplicación siguen siendo responsabilidad del motor.
+
 ## Ejecución
 
 ```sh

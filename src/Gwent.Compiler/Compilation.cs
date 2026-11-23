@@ -59,6 +59,30 @@ public sealed class CompilationResult
     public IReadOnlyDictionary<string, CompiledEffect> Effects { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public bool Success => Diagnostics.Count == 0;
+
+    public bool ApplyCardEffect(Game game, Player player, Card card)
+    {
+        ArgumentNullException.ThrowIfNull(game);
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(card);
+
+        if (!Cards.TryGetValue(card.DefinitionId, out var definition))
+            throw new ArgumentException($"Card definition '{card.DefinitionId}' does not belong to this compilation.", nameof(card));
+
+        if (!StringComparer.Ordinal.Equals(card.Name, definition.Name) ||
+            card.BasePower != definition.Power ||
+            card.Row != definition.Row ||
+            !StringComparer.Ordinal.Equals(card.EffectId, definition.EffectId))
+            throw new ArgumentException("Card instance does not match its compiled definition.", nameof(card));
+
+        if (definition.EffectId is null) return false;
+
+        if (!Effects.TryGetValue(definition.EffectId, out var effect))
+            throw new InvalidOperationException($"Compiled effect '{definition.EffectId}' is missing from the catalog.");
+
+        game.ApplyEffect(player, card, effect.ToEngineEffect());
+        return true;
+    }
 }
 
 public sealed class DslCompiler

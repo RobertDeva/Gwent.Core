@@ -22,12 +22,49 @@ public sealed class CompilerEngineIntegrationTests
         Assert.Same(card, game.Draw(player));
         game.Play(player, card);
 
-        game.ApplyEffect(player, card, result.Effects["rally"].ToEngineEffect());
+        Assert.True(result.ApplyCardEffect(game, player, card));
 
         Assert.Equal(7, card.Power);
         Assert.Equal(7, Game.Score(player));
         Assert.Throws<InvalidOperationException>(() =>
             game.ApplyEffect(player, card, result.Effects["rally"].ToEngineEffect()));
+    }
+
+    [Fact]
+    public void CompiledCardWithoutEffectDoesNotMutateTheGame()
+    {
+        var result = new DslCompiler().Compile("""
+            card recruit "Recruit" power 2 row ranged
+            """);
+        Assert.True(result.Success);
+
+        var player = new Player("human");
+        var game = new Game(player, new Player("opponent"));
+        var card = result.Cards["recruit"].CreateCard();
+        game.AddToDeck(player, card);
+        game.Draw(player);
+        game.Play(player, card);
+
+        Assert.False(result.ApplyCardEffect(game, player, card));
+        Assert.Equal(2, card.Power);
+    }
+
+    [Fact]
+    public void CompiledCatalogRejectsCardWithMismatchedDefinitionData()
+    {
+        var result = new DslCompiler().Compile("""
+            card recruit "Recruit" power 2 row ranged
+            """);
+        Assert.True(result.Success);
+
+        var player = new Player("human");
+        var game = new Game(player, new Player("opponent"));
+        var foreignCard = new Card("recruit", "Impostor", 2, Row.Ranged);
+        game.AddToDeck(player, foreignCard);
+        game.Draw(player);
+        game.Play(player, foreignCard);
+
+        Assert.Throws<ArgumentException>(() => result.ApplyCardEffect(game, player, foreignCard));
     }
 
     [Fact]
