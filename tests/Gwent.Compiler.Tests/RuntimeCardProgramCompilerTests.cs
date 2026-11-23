@@ -160,6 +160,49 @@ public sealed class RuntimeCardProgramCompilerTests
     }
 
 
+
+    [Fact]
+    public void ActivationRequiresAGameContext()
+    {
+        var player = new Gwent.Engine.Player("p1");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("p2"));
+        var card = new Gwent.Engine.Card("unit", "Unit", 1, Gwent.Engine.Row.Melee);
+        game.AddToDeck(player, card);
+        game.MoveCard(card, player, Gwent.Engine.CardZone.Field);
+        var invocation = new RuntimeEffectInvocation(
+            "noop", new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector("field", new LiteralExpression(RuntimeValue.From(false))));
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", [invocation]);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([new RuntimeEffectDefinition("noop", [], [])]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+        var context = new RuntimeExecutionContext(player, card);
+
+        Assert.Throws<InvalidOperationException>(() => program.Activate(card, 0, context));
+    }
+
+    [Fact]
+    public void InvalidInstructionLimitDoesNotPlayTheCard()
+    {
+        var player = new Gwent.Engine.Player("p1");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("p2"));
+        var card = new Gwent.Engine.Card("unit", "Unit", 1, Gwent.Engine.Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", []);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => program.Play(game, player, card, 0));
+        Assert.Equal(Gwent.Engine.CardZone.Hand, card.Zone);
+        Assert.Contains(card, player.Hand);
+    }
+
     [Fact]
     public void ActivationRejectsCardsFromAnotherGame()
     {

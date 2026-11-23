@@ -98,7 +98,9 @@ public sealed class RuntimeCardProgram
         ArgumentNullException.ThrowIfNull(context);
         if (!ReferenceEquals(context.SourceCard, card))
             throw new ArgumentException("Execution context source card does not match the activation card.", nameof(context));
-        if (context.Game is not null && !context.Game.ContainsCard(card))
+        if (context.Game is null)
+            throw new InvalidOperationException("Compiled card activation requires a game context.");
+        if (!context.Game.ContainsCard(card))
             throw new ArgumentException("Activation card does not belong to the current game.", nameof(card));
         if (card.Zone != Gwent.Engine.CardZone.Field)
             throw new InvalidOperationException("Only a card on the field can activate its effects.");
