@@ -74,6 +74,8 @@ public sealed class RuntimeCardProgram
         ArgumentNullException.ThrowIfNull(game);
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(card);
+        if (instructionLimit <= 0)
+            throw new ArgumentOutOfRangeException(nameof(instructionLimit));
         if (!Cards.TryGetValue(card.DefinitionId, out var definition))
             throw new KeyNotFoundException($"No compiled card definition exists for '{card.DefinitionId}'.");
         if (!game.ContainsCard(card))
