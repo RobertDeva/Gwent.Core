@@ -25,6 +25,7 @@
 - Runtime DSL effect bodies are semantically analyzed during compilation, including identifier resolution, assignment compatibility, expression types, loop scopes, and boolean Find predicates. Program compilation aggregates effect-body and activation diagnostics before publishing an executable program.
 - Legacy card member semantics are represented explicitly: Owner resolves to a Player, OwnerId remains available as a string, Range exposes the allowed row names as a read-only indexed collection, and Row identifies the chosen instance row.
 - Runtime card catalogs and activation argument maps are immutable snapshots; duplicate card fields, duplicate activation/selector fields, duplicate allowed rows, and blank required card metadata are rejected during compilation.
+- The original player-zone helper calls HandOfPlayer, DeckOfPlayer, FieldOfPlayer, and GraveyardOfPlayer are supported as typed runtime functions in addition to context member access.
 
 ## Remaining
 

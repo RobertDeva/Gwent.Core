@@ -66,7 +66,7 @@ A nested PostAction can use Source: "parent" to operate on the preceding activat
 
 Expressions support typed literals, identifiers, parentheses, arithmetic, comparisons, equality, Boolean operators, string concatenation, member access, collection indexers, lambda predicates, and variable assignment.
 
-The runtime context exposes context.TriggerPlayer, context.SourceCard, context.Game, context.Hand, context.Deck, context.Field, context.Graveyard, context.Board, and the corresponding opponent collections when a game is available.
+The runtime context exposes context.TriggerPlayer, context.OtherPlayer, context.SourceCard, context.Game, context.Hand, context.Deck, context.Field, context.Graveyard, context.Board, and the corresponding opponent collections when a game is available. The legacy helper functions HandOfPlayer(player), DeckOfPlayer(player), FieldOfPlayer(player), and GraveyardOfPlayer(player) are also supported and return the corresponding player-zone collection.
 
 Collection expressions include Find, Add, Push, Remove, SendBottom, Pop, Shuffle, and Count. Collections obtained from player zones are live zone views: their mutations are routed through Game.MoveCard, including source-effect cleanup and ownership transfer. Pop temporarily detaches its card; every top-level effect execution verifies that all registered card instances finish in exactly one valid game zone. Collections without a game context are read-only snapshots. Filtered target lists and locally-created collections remain independent snapshots.
 
