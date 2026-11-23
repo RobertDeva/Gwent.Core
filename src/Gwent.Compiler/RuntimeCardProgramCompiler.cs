@@ -22,9 +22,36 @@ public sealed class RuntimeCardProgram
                 throw new ArgumentException(
                     $"Card catalog key '{pair.Key}' does not match definition id '{pair.Value.Id}'.",
                     nameof(cards));
-            catalog.Add(pair.Key, pair.Value);
+            catalog.Add(pair.Key, SnapshotDefinition(pair.Value));
         }
         Cards = new ReadOnlyDictionary<string, RuntimeCardDefinition>(catalog);
+    }
+
+    private static RuntimeCardDefinition SnapshotDefinition(RuntimeCardDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition.Ranges);
+        ArgumentNullException.ThrowIfNull(definition.Activations);
+        return definition with
+        {
+            Ranges = Array.AsReadOnly(definition.Ranges.ToArray()),
+            Activations = Array.AsReadOnly(
+                definition.Activations.Select(SnapshotInvocation).ToArray())
+        };
+    }
+
+    private static RuntimeEffectInvocation SnapshotInvocation(RuntimeEffectInvocation invocation)
+    {
+        ArgumentNullException.ThrowIfNull(invocation);
+        ArgumentNullException.ThrowIfNull(invocation.Arguments);
+        ArgumentNullException.ThrowIfNull(invocation.Selector);
+        return invocation with
+        {
+            Arguments = new ReadOnlyDictionary<string, RuntimeExpression>(
+                new Dictionary<string, RuntimeExpression>(invocation.Arguments, StringComparer.Ordinal)),
+            PostAction = invocation.PostAction is null
+                ? null
+                : SnapshotInvocation(invocation.PostAction)
+        };
     }
 
     public RuntimeEffectCatalog Effects { get; }

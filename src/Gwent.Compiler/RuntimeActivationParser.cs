@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace Gwent.Compiler;
 
 public sealed record RuntimeActivationCompilationResult(
@@ -113,7 +115,9 @@ public sealed class RuntimeActivationParser
             return null;
         }
 
-        return new RuntimeEffectInvocation(effectId, arguments,
+        return new RuntimeEffectInvocation(effectId,
+            new ReadOnlyDictionary<string, RuntimeExpression>(
+                new Dictionary<string, RuntimeExpression>(arguments, StringComparer.Ordinal)),
             new RuntimeSelector(source, single, predicate), postAction);
     }
 

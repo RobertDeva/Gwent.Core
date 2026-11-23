@@ -63,6 +63,19 @@ public sealed class RuntimeActivationParserTests
             diagnostic.Message.Contains("Activation field 'Source'", StringComparison.Ordinal));
     }
 
+
+    [Fact]
+    public void ParsedActivationArgumentsAreReadOnly()
+    {
+        var result = new RuntimeActivationParser(
+            """OnActivation: [{ Type: "rally", Params: { amount: 1, } }]""").Parse();
+        var arguments = Assert.Single(result.Activations).Arguments;
+        var mutableView = Assert.IsAssignableFrom<IDictionary<string, RuntimeExpression>>(arguments);
+
+        Assert.Throws<NotSupportedException>(() =>
+            mutableView.Add("extra", new LiteralExpression(RuntimeValue.From(2))));
+    }
+
     [Fact]
     public void RejectsDuplicateParameterAssignments()
     {

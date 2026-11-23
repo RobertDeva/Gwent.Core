@@ -103,6 +103,28 @@ public sealed class RuntimeCardProgramCompilerTests
     }
 
 
+
+    [Fact]
+    public void RuntimeCardProgramSnapshotsMutableDefinitionCollections()
+    {
+        var ranges = new List<string> { "Melee" };
+        var activations = new List<RuntimeEffectInvocation>();
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ranges, "Unit", activations);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+
+        ranges.Add("Range");
+        activations.Add(new RuntimeEffectInvocation(
+            "noop", new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector("field", new LiteralExpression(RuntimeValue.From(false)))));
+
+        Assert.Equal(["Melee"], program.Cards["unit"].Ranges);
+        Assert.Empty(program.Cards["unit"].Activations);
+    }
+
     [Fact]
     public void RuntimeCardProgramRejectsMismatchedCatalogKeys()
     {
