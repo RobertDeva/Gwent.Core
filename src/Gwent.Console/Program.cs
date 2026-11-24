@@ -158,8 +158,7 @@ var secondRoundScore = second.Board.Score;
 game.Pass(game.CurrentPlayer);
 game.Pass(game.CurrentPlayer);
 
-Console.WriteLine($"
-{first.Id}: {firstRoundScore}");
+Console.WriteLine($"\n{first.Id}: {firstRoundScore}");
 Console.WriteLine($"{second.Id}: {secondRoundScore}");
 Console.WriteLine(game.LastRoundWinner is null
     ? "Round result: draw"
