@@ -151,7 +151,7 @@ public sealed class EndToEndRuntimeDslTests
                         Selector: {
                             Source: "field";
                             Single: false;
-                            Predicate: (unit) => unit.Power > 0;
+                            Predicate: (unit) => unit.Power == 2;
                         },
                         PostAction: {
                             Type: "follow-up",
@@ -178,7 +178,7 @@ public sealed class EndToEndRuntimeDslTests
 
         Assert.Single(result);
         Assert.Equal(5, ally.Power);
-        Assert.Equal(4, commander.Power);
+        Assert.Equal(1, commander.Power);
         game.ValidateCardZones();
     }
 
