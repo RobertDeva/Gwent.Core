@@ -334,6 +334,7 @@ public sealed class Player
     }
 
     public string Id { get; }
+    public CardDefinition? LeaderDefinition { get; internal set; }
     public Board Board { get; }
     public IReadOnlyList<Card> Deck => _deckView;
     public IReadOnlyList<Card> Hand => _handView;
@@ -510,6 +511,24 @@ public sealed class Game
         card.Assign(player, _id);
         player.AddToDeck(card);
         _cardsByInstance.Add(card.InstanceId, card);
+    }
+
+    public void LoadDeck(Player player, DeckDefinition deck)
+    {
+        EnsureNotFinished();
+        ValidatePlayer(player);
+        ArgumentNullException.ThrowIfNull(deck);
+
+        if (player.LeaderDefinition is not null ||
+            player.Deck.Count != 0 || player.Hand.Count != 0 ||
+            player.Field.Count != 0 || player.Graveyard.Count != 0)
+            throw new InvalidOperationException("A deck can only be loaded into a player with no registered cards.");
+
+        var instances = deck.CreateCardInstances();
+        foreach (var card in instances)
+            AddToDeck(player, card);
+
+        player.LeaderDefinition = deck.Leader;
     }
 
     public Card? Draw(Player player)
