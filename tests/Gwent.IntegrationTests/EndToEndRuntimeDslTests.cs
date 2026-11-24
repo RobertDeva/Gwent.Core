@@ -404,4 +404,76 @@ public sealed class EndToEndRuntimeDslTests
     }
 
 
+
+    [Fact]
+    public void DslEffectCanDestroyAnOpponentUnitIntoItsOwnersGraveyard()
+    {
+        var source = """
+            effect {
+                Name: "slay",
+                Params: { },
+                Action: (targets, context) => {
+                    for unit in targets {
+                        unit.Owner.Graveyard.Add(unit);
+                    };
+                }
+            }
+
+            card filler {
+                Name: "Filler";
+                Power: 1;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "Filler";
+                OnActivation: [];
+            }
+
+            card slayer {
+                Name: "Slayer";
+                Power: 2;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "Slayer";
+                OnActivation: [
+                    {
+                        Type: "slay",
+                        Params: { },
+                        Selector: { Source: "otherField"; Single: false; },
+                    },
+                ];
+            }
+            """;
+        var compiled = new DslCompiler().CompileRuntimeProgram(source);
+        Assert.True(compiled.Success, string.Join(Environment.NewLine, compiled.Diagnostics));
+
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var filler = compiled.Program!.CreateCardInstance("filler", Row.Melee);
+        var slayer = compiled.Program.CreateCardInstance("slayer", Row.Melee);
+        var enemy = new Card("enemy", "Enemy", 5, Row.Melee);
+        game.AddToDeck(first, filler);
+        game.AddToDeck(first, slayer);
+        game.AddToDeck(second, enemy);
+
+        game.Draw(first);
+        game.Draw(first);
+        game.Play(first, filler);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, enemy);
+        game.EndTurn();
+        compiled.Program.Play(game, first, slayer);
+
+        Assert.Equal(CardZone.Graveyard, enemy.Zone);
+        Assert.Contains(enemy, second.Graveyard);
+        Assert.DoesNotContain(enemy, first.Graveyard);
+        game.ValidateCardZones();
+    }
+
+
 }
