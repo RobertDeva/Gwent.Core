@@ -1,4 +1,110 @@
-# A minimal Gwent.Core DSL program
-effect rally boost 2
-card vanguard "Northern Vanguard" power 4 row melee effect rally
-card archer "Frontier Archer" power 3 row ranged
+# A two-faction runtime DSL sample used by the console application.
+effect {
+    Name: "rally",
+    Params: { amount: Number, },
+    Action: (targets, context) => {
+        for unit in targets {
+            unit.Power = unit.Power + amount;
+        };
+    }
+}
+
+effect {
+    Name: "banner",
+    Params: { factor: Number, },
+    Action: (targets, context) => {
+        for unit in targets {
+            unit.Power = unit.Power * factor;
+        };
+    }
+}
+
+card northern_leader {
+    Name: "Northern Leader";
+    Power: 0;
+    Faction: Northern;
+    Type: Leader;
+    Rank: Special;
+    Range: ["Melee"];
+    description: "Leader of the Northern faction";
+    OnActivation: [];
+}
+
+card nilfgaard_leader {
+    Name: "Nilfgaardian Leader";
+    Power: 0;
+    Faction: Nilfgaard;
+    Type: Leader;
+    Rank: Special;
+    Range: ["Melee"];
+    description: "Leader of Nilfgaard";
+    OnActivation: [];
+}
+
+card northern_vanguard {
+    Name: "Northern Vanguard";
+    Power: 4;
+    Faction: Northern;
+    Type: Unit;
+    Rank: Silver;
+    Range: ["Melee", "Range"];
+    description: "A flexible front-line unit";
+    OnActivation: [
+        {
+            Type: "rally",
+            Params: { amount: 2, },
+            Selector: { Source: "field"; Single: false; },
+        },
+    ];
+}
+
+card northern_archer {
+    Name: "Northern Archer";
+    Power: 3;
+    Faction: Northern;
+    Type: Unit;
+    Rank: Silver;
+    Range: ["Range"];
+    description: "A ranged unit";
+    OnActivation: [
+        {
+            Type: "banner",
+            Params: { factor: 2, },
+            Selector: { Source: "board"; Single: false; },
+        },
+    ];
+}
+
+card nilfgaard_scout {
+    Name: "Nilfgaardian Scout";
+    Power: 4;
+    Faction: Nilfgaard;
+    Type: Unit;
+    Rank: Silver;
+    Range: ["Melee", "Range"];
+    description: "A flexible scout";
+    OnActivation: [
+        {
+            Type: "rally",
+            Params: { amount: 2, },
+            Selector: { Source: "otherField"; Single: false; },
+        },
+    ];
+}
+
+card nilfgaard_mage {
+    Name: "Nilfgaardian Mage";
+    Power: 3;
+    Faction: Nilfgaard;
+    Type: Unit;
+    Rank: Silver;
+    Range: ["Range"];
+    description: "A ranged mage";
+    OnActivation: [
+        {
+            Type: "banner",
+            Params: { factor: 2, },
+            Selector: { Source: "field"; Single: false; },
+        },
+    ];
+}
