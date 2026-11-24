@@ -182,4 +182,105 @@ public sealed class EndToEndRuntimeDslTests
         game.ValidateCardZones();
     }
 
+
+    [Fact]
+    public void NestedPostActionsInheritAncestorParametersAndParentTargets()
+    {
+        var source = """
+            effect {
+                Name: "first",
+                Params: { rootAmount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets { unit.Power = unit.Power + rootAmount; };
+                }
+            }
+
+            effect {
+                Name: "second",
+                Params: { childAmount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets { unit.Power = unit.Power + childAmount; };
+                }
+            }
+
+            effect {
+                Name: "third",
+                Params: { grandAmount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets { unit.Power = unit.Power + grandAmount; };
+                }
+            }
+
+            effect {
+                Name: "fourth",
+                Params: { finalAmount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets { unit.Power = unit.Power + finalAmount; };
+                }
+            }
+
+            card ally {
+                Name: "Ally";
+                Power: 2;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "An ally";
+            }
+
+            card commander {
+                Name: "Commander";
+                Power: 1;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "A commander";
+                OnActivation: [
+                    {
+                        Type: "first",
+                        Params: { rootAmount: 1, },
+                        Selector: {
+                            Source: "field";
+                            Single: false;
+                            Predicate: (unit) => unit.Power == 2;
+                        },
+                        PostAction: {
+                            Type: "second",
+                            Params: { childAmount: rootAmount + 1, },
+                            PostAction: {
+                                Type: "third",
+                                Params: { grandAmount: childAmount + 1, },
+                                PostAction: {
+                                    Type: "fourth",
+                                    Params: { finalAmount: grandAmount + 1, },
+                                },
+                            },
+                        },
+                    },
+                ];
+            }
+            """;
+
+        var compiled = new DslCompiler().CompileRuntimeProgram(source);
+        Assert.True(compiled.Success, string.Join(Environment.NewLine, compiled.Diagnostics));
+
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var ally = compiled.Program!.CreateCardInstance("ally", Row.Melee);
+        var commander = compiled.Program.CreateCardInstance("commander", Row.Melee);
+        game.AddToDeck(player, ally);
+        game.AddToDeck(player, commander);
+        game.MoveCard(ally, player, CardZone.Field);
+        game.Draw(player);
+
+        compiled.Program.Play(game, player, commander);
+
+        Assert.Equal(12, ally.Power);
+        Assert.Equal(1, commander.Power);
+        game.ValidateCardZones();
+    }
+
+
 }

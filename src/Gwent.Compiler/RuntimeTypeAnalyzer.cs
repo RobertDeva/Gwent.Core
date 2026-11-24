@@ -107,8 +107,20 @@ public sealed class RuntimeTypeAnalyzer
                 _diagnostics.Add(new Diagnostic(invocation.SourceLine, $"Effect '{definition.Id}' requires parameter '{parameter.Name}'.", invocation.SourceColumn));
 
         ValidateSelector(invocation.Selector, callerVariables, definition.Id, isPostAction);
+
         if (invocation.PostAction is not null)
-            AnalyzeInvocation(catalog, invocation.PostAction, callerVariables, isPostAction: true);
+        {
+            // PostAction arguments and selectors are evaluated while the parent
+            // invocation's scope is active. Mirror that lexical scope during
+            // semantic analysis so ancestor parameters remain visible at every depth.
+            var postActionVariables = CopyVariables(callerVariables);
+            postActionVariables["targets"] = RuntimeType.CardCollection;
+            postActionVariables["context"] = RuntimeType.Context;
+            foreach (var parameter in definition.Parameters)
+                postActionVariables[parameter.Name] = ToRuntimeType(parameter.Type);
+
+            AnalyzeInvocation(catalog, invocation.PostAction, postActionVariables, isPostAction: true);
+        }
     }
 
     private void ValidateSelector(
