@@ -454,4 +454,36 @@ public sealed class GameTests
     }
 
 
+
+    [Fact]
+    public void DestroyingOpponentAuraRemovesItsModifiersFromBothFields()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var target = new Card("target", "Target", 5, Row.Melee);
+        var aura = new Card("aura", "Aura", 0, Row.Melee, "frost");
+        game.AddToDeck(first, target);
+        game.AddToDeck(second, aura);
+
+        game.Draw(first);
+        game.Play(first, target);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, aura);
+        game.ApplyEffect(second, aura, new CardEffect(
+            "frost", 1, EffectDuration.WhileSourceOnField,
+            EffectOperation.Set, EffectTargetScope.BothPlayersInRow));
+        Assert.Equal(1, target.Power);
+        game.EndTurn();
+
+        game.Destroy(first, aura);
+
+        Assert.Equal(5, target.Power);
+        Assert.Equal(CardZone.Graveyard, aura.Zone);
+        Assert.Contains(aura, second.Graveyard);
+        game.ValidateCardZones();
+    }
+
+
 }
