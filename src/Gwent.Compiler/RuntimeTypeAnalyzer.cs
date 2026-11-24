@@ -362,33 +362,33 @@ public sealed class RuntimeTypeAnalyzer
                 "SourceCard" => RuntimeType.Card,
                 "Game" => RuntimeType.Game,
                 "Hand" or "Deck" or "Field" or "Graveyard" or "Board" or "OtherHand" or "OtherDeck" or "OtherField" => RuntimeType.CardCollection,
-                _ => UnknownMember(name, effectId)
+                _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.CardCollection => name switch
             {
                 "Count" => RuntimeType.Number,
-                _ => UnknownMember(name, effectId)
+                _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.StringCollection => name switch
             {
                 "Count" => RuntimeType.Number,
-                _ => UnknownMember(name, effectId)
+                _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.Player => name switch
             {
                 "Id" => RuntimeType.String,
                 "Hand" or "Deck" or "Field" or "Graveyard" or "Board" => RuntimeType.CardCollection,
-                _ => UnknownMember(name, effectId)
+                _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.Game => name switch
             {
                 "First" or "Second" or "CurrentPlayer" or "Winner" => RuntimeType.Player,
                 "RoundNumber" or "FirstRoundsWon" or "SecondRoundsWon" => RuntimeType.Number,
                 "IsFinished" => RuntimeType.Boolean,
-                _ => UnknownMember(name, effectId)
+                _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.Unknown => RuntimeType.Unknown,
-            _ => UnknownMember(name, effectId)
+            _ => UnknownMember(name, effectId, member)
         };
     }
 
@@ -413,7 +413,7 @@ public sealed class RuntimeTypeAnalyzer
             case RuntimeBinaryOperator.GreaterOrEqual:
             case RuntimeBinaryOperator.Less:
             case RuntimeBinaryOperator.LessOrEqual:
-                RequireTypes(left, right, RuntimeType.Number, expression.Operator.ToString(), effectId);
+                RequireTypes(left, right, RuntimeType.Number, expression.Operator.ToString(), effectId, expression);
                 return RuntimeType.Boolean;
             case RuntimeBinaryOperator.And:
             case RuntimeBinaryOperator.Or:
