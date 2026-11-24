@@ -230,11 +230,11 @@ if (interactive)
                     break;
                 }
 
-                var card = player.Hand[cardIndex];
-                var selectedRow = card.Row;
+                var cardToPlay = player.Hand[cardIndex];
+                var selectedRow = cardToPlay.Row;
                 if (playArguments.Length == 2 &&
                     (!Enum.TryParse<Row>(playArguments[1], true, out selectedRow) ||
-                     !card.AllowedRows.Contains(selectedRow)))
+                     !cardToPlay.AllowedRows.Contains(selectedRow)))
                 {
                     Console.WriteLine("That card cannot be played in the requested row.");
                     break;
@@ -242,8 +242,8 @@ if (interactive)
 
                 try
                 {
-                    program.Play(game, player, card, selectedRow);
-                    Console.WriteLine($"Played {card.Name} in {card.Row} ({card.Power} power).");
+                    program.Play(game, player, cardToPlay, selectedRow);
+                    Console.WriteLine($"Played {cardToPlay.Name} in {cardToPlay.Row} ({cardToPlay.Power} power).");
                     game.EndTurn();
                 }
                 catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)

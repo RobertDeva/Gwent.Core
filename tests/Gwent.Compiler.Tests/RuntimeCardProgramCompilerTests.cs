@@ -446,7 +446,7 @@ public sealed class RuntimeCardProgramCompilerTests
         compilation.Program.Play(game, player, card, Gwent.Engine.Row.Ranged);
 
         Assert.Equal(Gwent.Engine.Row.Ranged, card.Row);
-        Assert.Contains(card, player.Board.Ranged);
+        Assert.Contains(card, player.Board.GetRow(Gwent.Engine.Row.Ranged));
         game.ValidateCardZones();
     }
 

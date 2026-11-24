@@ -502,8 +502,8 @@ public sealed class GameTests
         game.Play(player, card, Row.Ranged);
 
         Assert.Equal(Row.Ranged, card.Row);
-        Assert.Empty(player.Board.Melee);
-        Assert.Contains(card, player.Board.Ranged);
+        Assert.Empty(player.Board.GetRow(Row.Melee));
+        Assert.Contains(card, player.Board.GetRow(Row.Ranged));
         game.ValidateCardZones();
     }
 
