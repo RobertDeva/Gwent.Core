@@ -425,4 +425,33 @@ public sealed class GameTests
     }
 
 
+
+    [Fact]
+    public void ActivePlayerCanDestroyAnOpponentCard()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var destroyer = new Card("destroyer", "Destroyer", 1, Row.Melee);
+        var target = new Card("target", "Target", 5, Row.Ranged);
+        game.AddToDeck(first, destroyer);
+        game.AddToDeck(second, target);
+
+        game.Draw(first);
+        game.Play(first, destroyer);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, target);
+        game.EndTurn();
+
+        game.Destroy(first, target);
+
+        Assert.Equal(CardZone.Graveyard, target.Zone);
+        Assert.DoesNotContain(target, second.Field);
+        Assert.Contains(target, second.Graveyard);
+        Assert.Empty(first.Graveyard);
+        game.ValidateCardZones();
+    }
+
+
 }

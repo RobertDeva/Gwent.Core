@@ -535,12 +535,15 @@ public sealed class Game
     {
         ValidateActivePlayer(player);
         ArgumentNullException.ThrowIfNull(card);
-        if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
-            !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
-            throw new InvalidOperationException("Only a card on the active player's field can be destroyed.");
+        var owner = StringComparer.Ordinal.Equals(card.OwnerId, First.Id) ? First :
+            StringComparer.Ordinal.Equals(card.OwnerId, Second.Id) ? Second :
+            throw new InvalidOperationException("Card has no valid owner in this game.");
+        if (card.Zone != CardZone.Field ||
+            !owner.Field.Any(existing => existing.InstanceId == card.InstanceId))
+            throw new InvalidOperationException("Only a card currently on either player's field can be destroyed.");
         DeactivateEffectsFrom(card);
         card.RemovePersistentModifiers();
-        player.MoveToGraveyard(card);
+        owner.MoveToGraveyard(card);
         RefreshPersistentEffects();
     }
 
