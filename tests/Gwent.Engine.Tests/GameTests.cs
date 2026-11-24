@@ -378,4 +378,51 @@ public sealed class GameTests
 
 
 
+
+    [Fact]
+    public void RoundBoundModifierSurvivesLeavingFieldAndExpiresAtRoundEnd()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var card = new Card("unit", "Unit", 5, Row.Melee);
+        game.AddToDeck(first, card);
+        game.Draw(first);
+        game.Play(first, card);
+        game.ApplyPowerModifier(first, card, "temporary-buff",
+            EffectOperation.Add, 3, EffectDuration.UntilRoundEnd);
+
+        game.MoveCard(card, first, CardZone.Graveyard);
+
+        Assert.Equal(8, card.Power);
+        game.Pass(first);
+        game.Pass(second);
+
+        Assert.Equal(CardZone.Graveyard, card.Zone);
+        Assert.Equal(5, card.Power);
+    }
+
+    [Fact]
+    public void RoundBoundModifierSurvivesDestroyUntilRoundCleanup()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var card = new Card("unit", "Unit", 5, Row.Melee);
+        game.AddToDeck(first, card);
+        game.Draw(first);
+        game.Play(first, card);
+        game.ApplyPowerModifier(first, card, "temporary-buff",
+            EffectOperation.Add, 3, EffectDuration.UntilRoundEnd);
+
+        game.Destroy(first, card);
+
+        Assert.Equal(8, card.Power);
+        game.Pass(first);
+        game.Pass(second);
+
+        Assert.Equal(5, card.Power);
+    }
+
+
 }

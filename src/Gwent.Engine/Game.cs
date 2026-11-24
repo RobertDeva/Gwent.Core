@@ -540,7 +540,6 @@ public sealed class Game
             throw new InvalidOperationException("Only a card on the active player's field can be destroyed.");
         DeactivateEffectsFrom(card);
         card.RemovePersistentModifiers();
-        card.RemoveRoundModifiers();
         player.MoveToGraveyard(card);
         RefreshPersistentEffects();
     }
@@ -606,7 +605,6 @@ public sealed class Game
         {
             DeactivateEffectsFrom(card);
             card.RemovePersistentModifiers();
-            card.RemoveRoundModifiers();
         }
 
         sourcePlayer.RemoveFromCurrentZone(card);
@@ -764,7 +762,10 @@ public sealed class Game
             _roundStarter = ReferenceEquals(_roundStarter, First) ? Second : First;
         }
 
-        foreach (var card in First.Field.Concat(Second.Field))
+        // Round-bound modifiers belong to card instances, not field membership.
+        // Clean every registered instance so moving or destroying a card does not
+        // accidentally shorten an UntilRoundEnd effect.
+        foreach (var card in _cardsByInstance.Values)
         {
             card.RemovePersistentModifiers();
             card.RemoveRoundModifiers();
