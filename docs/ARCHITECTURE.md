@@ -8,9 +8,10 @@ Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity rem
 
 ## Core invariants
 
-- Card definitions produce independent physical instances.
+- Card definitions produce independent physical instances. DeckDefinition validates a leader, a minimum of 25 same-faction entries, and each entry's allowed row; repeated definitions intentionally create distinct card instances.
 - Each registered instance belongs to one game and one owner, and must occupy exactly one matching player zone at validated operation boundaries. Runtime collection Pop may temporarily detach an instance; top-level effect completion rejects any card left detached, duplicated, missing, unregistered, or stored under zone/owner metadata that disagrees with its actual collection.
 - Player IDs are unique within a game because ownership and effect-source resolution use those IDs.
+- A validated deck is loaded only into an empty player; its leader remains deck metadata rather than entering the shuffled card pile.
 - Game validates every zone transition and active-player operation.
 - The field is divided into Melee, Ranged, and Siege rows; scores are derived from board contents.
 - Passing ends a player's participation in the current round. Both players must pass to resolve it.
