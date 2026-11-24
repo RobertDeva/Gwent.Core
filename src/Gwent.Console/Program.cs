@@ -113,7 +113,10 @@ card nilfgaard_mage {
 }
 """;
 
-var source = args.Length > 0 ? File.ReadAllText(args[0]) : sampleDsl;
+var interactive = args.Contains("--interactive", StringComparer.Ordinal);
+var sourcePath = args.FirstOrDefault(argument =>
+    !StringComparer.Ordinal.Equals(argument, "--interactive"));
+var source = sourcePath is null ? sampleDsl : File.ReadAllText(sourcePath);
 var compilation = new DslCompiler().CompileRuntimeProgram(source);
 if (!compilation.Success)
 {
@@ -143,6 +146,120 @@ game.LoadDeck(first, program.CreateDeckDefinition(
 game.LoadDeck(second, program.CreateDeckDefinition(
     "Nilfgaard deck", "nilfgaard_leader", secondEntries));
 game.InitializeMatch(new Random(42));
+
+if (interactive)
+{
+    foreach (var player in new[] { first, second })
+    {
+        Console.WriteLine($"{player.Id}: mulligan up to two hand indexes (space/comma separated), or Enter to keep.");
+        var selection = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(selection)) continue;
+
+        var tokens = selection.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length > 2 ||
+            tokens.Any(token => !int.TryParse(token, out var index) ||
+                                index < 0 || index >= player.Hand.Count))
+        {
+            Console.WriteLine("Invalid mulligan selection; keeping the current hand.");
+            continue;
+        }
+
+        var indexes = tokens.Select(token => int.Parse(token)).ToArray();
+        try
+        {
+            game.Mulligan(player, indexes.Select(index => player.Hand[index]));
+        }
+        catch (ArgumentException exception)
+        {
+            Console.WriteLine(exception.Message);
+        }
+    }
+
+    Console.WriteLine("Commands: hand, board, status, draw, play <index>, end, pass, help, quit");
+    while (!game.IsFinished)
+    {
+        var player = game.CurrentPlayer;
+        Console.Write($"{player.Id}> ");
+        var input = Console.ReadLine();
+        if (input is null) break;
+
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) continue;
+
+        switch (parts[0].ToLowerInvariant())
+        {
+            case "help":
+                Console.WriteLine("hand | board | status | draw | play <index> | end | pass | quit");
+                break;
+            case "hand":
+                for (var index = 0; index < player.Hand.Count; index++)
+                {
+                    var card = player.Hand[index];
+                    Console.WriteLine($"{index}: {card.Name} ({card.Row}, {card.Power} power)");
+                }
+                if (player.Hand.Count == 0) Console.WriteLine("Hand is empty.");
+                break;
+            case "board":
+                foreach (var participant in new[] { first, second })
+                {
+                    Console.WriteLine($"{participant.Id} — {participant.Board.Score} points");
+                    foreach (var row in Enum.GetValues<Row>())
+                    {
+                        var cards = participant.Board.GetRow(row);
+                        Console.WriteLine($"  {row}: {string.Join(", ", cards.Select(card => $"{card.Name} ({card.Power})"))}");
+                    }
+                }
+                break;
+            case "status":
+                Console.WriteLine($"Round {game.RoundNumber}; rounds {game.FirstRoundsWon}-{game.SecondRoundsWon}; " +
+                                  $"score {first.Board.Score}-{second.Board.Score}");
+                break;
+            case "draw":
+                var drawn = game.Draw(player);
+                Console.WriteLine(drawn is null ? "No card drawn." : $"Drew {drawn.Name}.");
+                break;
+            case "play":
+                if (parts.Length < 2 || !int.TryParse(parts[1], out var cardIndex) ||
+                    cardIndex < 0 || cardIndex >= player.Hand.Count)
+                {
+                    Console.WriteLine("Use: play <valid hand index>");
+                    break;
+                }
+                try
+                {
+                    var card = player.Hand[cardIndex];
+                    program.Play(game, player, card);
+                    Console.WriteLine($"Played {card.Name} ({card.Power} power).");
+                    game.EndTurn();
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+                {
+                    Console.WriteLine(exception.Message);
+                }
+                break;
+            case "end":
+                game.EndTurn();
+                break;
+            case "pass":
+                game.Pass(player);
+                break;
+            case "quit":
+                return 0;
+            default:
+                Console.WriteLine("Unknown command. Enter 'help' to see available commands.");
+                break;
+        }
+    }
+
+    Console.WriteLine($"Final rounds: {game.FirstRoundsWon} - {game.SecondRoundsWon}");
+    if (!game.IsFinished)
+        Console.WriteLine("Match stopped before completion.");
+    else if (game.Winner is null)
+        Console.WriteLine("Match ended in a tie.");
+    else
+        Console.WriteLine($"Match winner: {game.Winner.Id}");
+    return 0;
+}
 
 Console.WriteLine($"Round {game.RoundNumber}");
 foreach (var player in new[] { first, second })
