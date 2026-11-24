@@ -371,4 +371,51 @@ public sealed class RuntimeCardProgramCompilerTests
     }
 
 
+
+    [Fact]
+    public void CompiledCardCatalogBuildsValidatedDeckWithIndependentDuplicateInstances()
+    {
+        var cards = """
+            card leader {
+                Name: "Northern Leader";
+                Power: 0;
+                Faction: Northern;
+                Type: Leader;
+                Rank: Special;
+                Range: ["Melee"];
+                description: "Leader";
+                OnActivation: [];
+            }
+
+            card unit {
+                Name: "Northern Unit";
+                Power: 4;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee", "Range"];
+                description: "Unit";
+                OnActivation: [];
+            }
+            """;
+        var compiled = new RuntimeCardProgramCompiler().Compile(Effects, cards);
+        Assert.True(compiled.Success, string.Join(Environment.NewLine, compiled.Diagnostics));
+
+        var entries = Enumerable.Range(0, 25)
+            .Select(index => new RuntimeDeckCardEntry(
+                "unit", index % 2 == 0 ? Gwent.Engine.Row.Melee : Gwent.Engine.Row.Ranged));
+        var deck = compiled.Program!.CreateDeckDefinition("northern", "leader", entries);
+        var player = new Gwent.Engine.Player("first");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("second"));
+
+        game.LoadDeck(player, deck);
+
+        Assert.Equal(25, player.Deck.Count);
+        Assert.Same(deck.Leader, player.LeaderDefinition);
+        Assert.Equal(25, player.Deck.Select(card => card.InstanceId).Distinct().Count());
+        Assert.All(player.Deck, card => Assert.Equal("unit", card.DefinitionId));
+        game.ValidateCardZones();
+    }
+
+
 }

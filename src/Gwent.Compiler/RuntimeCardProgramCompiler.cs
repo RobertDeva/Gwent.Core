@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 
 namespace Gwent.Compiler;
 
+public sealed record RuntimeDeckCardEntry(string CardId, Gwent.Engine.Row Row);
+
 public sealed class RuntimeCardProgram
 {
     public RuntimeCardProgram(
@@ -79,6 +81,29 @@ public sealed class RuntimeCardProgram
         if (!Cards.TryGetValue(definitionId, out var definition))
             throw new KeyNotFoundException($"Card definition '{definitionId}' is not declared.");
         return definition.CreateInstance(row);
+    }
+
+    public Gwent.Engine.DeckDefinition CreateDeckDefinition(
+        string deckId,
+        string leaderCardId,
+        IEnumerable<RuntimeDeckCardEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        if (!Cards.TryGetValue(leaderCardId, out var leader))
+            throw new KeyNotFoundException($"Leader card definition '{leaderCardId}' is not declared.");
+
+        var deckEntries = new List<Gwent.Engine.DeckCardEntry>();
+        foreach (var entry in entries)
+        {
+            ArgumentNullException.ThrowIfNull(entry);
+            if (!Cards.TryGetValue(entry.CardId, out var definition))
+                throw new KeyNotFoundException($"Card definition '{entry.CardId}' is not declared.");
+            deckEntries.Add(new Gwent.Engine.DeckCardEntry(
+                definition.ToEngineDefinition(), entry.Row));
+        }
+
+        return new Gwent.Engine.DeckDefinition(
+            deckId, leader.ToEngineDefinition(), deckEntries);
     }
 
     public IReadOnlyList<IReadOnlyList<Gwent.Engine.Card>> Play(
