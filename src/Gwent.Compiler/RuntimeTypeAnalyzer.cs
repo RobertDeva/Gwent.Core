@@ -420,7 +420,7 @@ public sealed class RuntimeTypeAnalyzer
             RuntimeType.Player => name switch
             {
                 "Id" => RuntimeType.String,
-                "Hand" or "Deck" or "Field" or "Graveyard" or "Board" => RuntimeType.CardCollection,
+                "Hand" or "Deck" or "Field" or "Weather" or "Upgrades" or "Graveyard" or "Board" => RuntimeType.CardCollection,
                 _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.Game => name switch
