@@ -175,7 +175,7 @@ if (interactive)
         }
     }
 
-    Console.WriteLine("Commands: hand, board, status, draw, play <index>, end, pass, help, quit");
+    Console.WriteLine("Commands: hand, board, status, draw, play <index> [Melee|Ranged|Siege], end, pass, help, quit");
     while (!game.IsFinished)
     {
         var player = game.CurrentPlayer;
@@ -189,13 +189,13 @@ if (interactive)
         switch (parts[0].ToLowerInvariant())
         {
             case "help":
-                Console.WriteLine("hand | board | status | draw | play <index> | end | pass | quit");
+                Console.WriteLine("hand | board | status | draw | play <index> [Melee|Ranged|Siege] | end | pass | quit");
                 break;
             case "hand":
                 for (var index = 0; index < player.Hand.Count; index++)
                 {
                     var card = player.Hand[index];
-                    Console.WriteLine($"{index}: {card.Name} ({card.Row}, {card.Power} power)");
+                    Console.WriteLine($"{index}: {card.Name} (allowed: {string.Join("/", card.AllowedRows)}; default: {card.Row}; {card.Power} power)");
                 }
                 if (player.Hand.Count == 0) Console.WriteLine("Hand is empty.");
                 break;
@@ -219,17 +219,31 @@ if (interactive)
                 Console.WriteLine(drawn is null ? "No card drawn." : $"Drew {drawn.Name}.");
                 break;
             case "play":
-                if (parts.Length < 2 || !int.TryParse(parts[1], out var cardIndex) ||
+                var playArguments = parts.Length > 1
+                    ? parts[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    : [];
+                if (playArguments.Length is < 1 or > 2 ||
+                    !int.TryParse(playArguments[0], out var cardIndex) ||
                     cardIndex < 0 || cardIndex >= player.Hand.Count)
                 {
-                    Console.WriteLine("Use: play <valid hand index>");
+                    Console.WriteLine("Use: play <valid hand index> [Melee|Ranged|Siege]");
                     break;
                 }
+
+                var card = player.Hand[cardIndex];
+                var selectedRow = card.Row;
+                if (playArguments.Length == 2 &&
+                    (!Enum.TryParse<Row>(playArguments[1], true, out selectedRow) ||
+                     !card.AllowedRows.Contains(selectedRow)))
+                {
+                    Console.WriteLine("That card cannot be played in the requested row.");
+                    break;
+                }
+
                 try
                 {
-                    var card = player.Hand[cardIndex];
-                    program.Play(game, player, card);
-                    Console.WriteLine($"Played {card.Name} ({card.Power} power).");
+                    program.Play(game, player, card, selectedRow);
+                    Console.WriteLine($"Played {card.Name} in {card.Row} ({card.Power} power).");
                     game.EndTurn();
                 }
                 catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)

@@ -156,7 +156,7 @@ public sealed class Card
             return power;
         }
     }
-    public Row Row { get; }
+    public Row Row { get; private set; }
     public string? EffectId { get; }
     public string Faction { get; }
     public string Type { get; }
@@ -165,6 +165,14 @@ public sealed class Card
     public IReadOnlyList<Row> AllowedRows { get; }
     public CardZone Zone { get; private set; }
     public string? OwnerId => _ownerId;
+
+    internal void SelectRow(Row row)
+    {
+        if (!Enum.IsDefined(row)) throw new ArgumentOutOfRangeException(nameof(row));
+        if (!AllowedRows.Contains(row))
+            throw new ArgumentException($"Card '{DefinitionId}' cannot be played in row '{row}'.", nameof(row));
+        Row = row;
+    }
 
     internal void Assign(Player owner, Guid gameId)
     {
@@ -612,15 +620,25 @@ public sealed class Game
         return player.DrawTopCard();
     }
 
-    public void Play(Player player, Card card)
+    public void Play(Player player, Card card) 
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        Play(player, card, card.Row);
+    }
+
+    public void Play(Player player, Card card, Row row)
     {
         ValidateActivePlayer(player);
         ArgumentNullException.ThrowIfNull(card);
+        if (!Enum.IsDefined(row)) throw new ArgumentOutOfRangeException(nameof(row));
         if (card.OwnerId != player.Id || card.Zone != CardZone.Hand ||
             !player.Hand.Any(existing => ReferenceEquals(existing, card)))
             throw new InvalidOperationException("Only a card in the active player's hand can be played.");
+        if (!card.AllowedRows.Contains(row))
+            throw new InvalidOperationException($"Card '{card.DefinitionId}' cannot be played in row '{row}'.");
         if (_hasPlayedThisTurn) throw new InvalidOperationException("A player can play only one card per turn.");
         CloseMulliganPhase();
+        card.SelectRow(row);
         player.PlayFromHand(card);
         _hasPlayedThisTurn = true;
         RefreshPersistentEffects();

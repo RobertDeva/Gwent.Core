@@ -418,4 +418,37 @@ public sealed class RuntimeCardProgramCompilerTests
     }
 
 
+
+    [Fact]
+    public void CompiledCardProgramCanSelectAnyAllowedRowAtPlayTime()
+    {
+        var cards = """
+            card vanguard {
+                Name: "Vanguard";
+                Power: 4;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee", "Range"];
+                description: "Front line unit";
+                OnActivation: [];
+            }
+            """;
+        var compilation = new RuntimeCardProgramCompiler().Compile(Effects, cards);
+        Assert.True(compilation.Success, string.Join(Environment.NewLine, compilation.Diagnostics));
+
+        var player = new Gwent.Engine.Player("first");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("second"));
+        var card = compilation.Program!.CreateCardInstance("vanguard", Gwent.Engine.Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+
+        compilation.Program.Play(game, player, card, Gwent.Engine.Row.Ranged);
+
+        Assert.Equal(Gwent.Engine.Row.Ranged, card.Row);
+        Assert.Contains(card, player.Board.Ranged);
+        game.ValidateCardZones();
+    }
+
+
 }

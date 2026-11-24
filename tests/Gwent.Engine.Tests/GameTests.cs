@@ -486,4 +486,46 @@ public sealed class GameTests
     }
 
 
+
+    [Fact]
+    public void PlayerChoosesOneOfTheCardAllowedRowsWhenPlaying()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var definition = new CardDefinition(
+            "multi-row", "Multi-row Unit", 4, "Northern", "Unit", "Silver",
+            [Row.Melee, Row.Ranged], "Can enter either row");
+        var card = definition.CreateInstance(Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+
+        game.Play(player, card, Row.Ranged);
+
+        Assert.Equal(Row.Ranged, card.Row);
+        Assert.Empty(player.Board.Melee);
+        Assert.Contains(card, player.Board.Ranged);
+        game.ValidateCardZones();
+    }
+
+    [Fact]
+    public void PlayingInAnUnallowedRowDoesNotMoveTheCardOrConsumeTheTurn()
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var definition = new CardDefinition(
+            "melee-only", "Melee Unit", 4, "Northern", "Unit", "Silver",
+            [Row.Melee], "Melee only");
+        var card = definition.CreateInstance(Row.Melee);
+        game.AddToDeck(player, card);
+        game.Draw(player);
+
+        Assert.Throws<InvalidOperationException>(() => game.Play(player, card, Row.Siege));
+
+        Assert.Equal(CardZone.Hand, card.Zone);
+        Assert.Contains(card, player.Hand);
+        Assert.Empty(player.Field);
+        game.ValidateCardZones();
+    }
+
+
 }

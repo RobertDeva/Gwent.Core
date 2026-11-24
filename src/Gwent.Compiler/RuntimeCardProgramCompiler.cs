@@ -113,6 +113,18 @@ public sealed class RuntimeCardProgram
         int instructionLimit = 10_000,
         Random? random = null)
     {
+        ArgumentNullException.ThrowIfNull(card);
+        return Play(game, player, card, card.Row, instructionLimit, random);
+    }
+
+    public IReadOnlyList<IReadOnlyList<Gwent.Engine.Card>> Play(
+        Gwent.Engine.Game game,
+        Gwent.Engine.Player player,
+        Gwent.Engine.Card card,
+        Gwent.Engine.Row row,
+        int instructionLimit = 10_000,
+        Random? random = null)
+    {
         ArgumentNullException.ThrowIfNull(game);
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(card);
@@ -124,7 +136,7 @@ public sealed class RuntimeCardProgram
         if (!game.ContainsCard(card))
             throw new ArgumentException("Card instance does not belong to the supplied game.", nameof(card));
 
-        game.Play(player, card);
+        game.Play(player, card, row);
         var context = new RuntimeExecutionContext(player, card, game, instructionLimit, random);
         var results = new List<IReadOnlyList<Gwent.Engine.Card>>(definition.Activations.Count);
         for (var index = 0; index < definition.Activations.Count; index++)
