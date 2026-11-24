@@ -60,7 +60,7 @@ A card activation references a reusable effect by its Type value. Arguments bind
 - Single: Boolean expression; when true, only the first matching card is selected.
 - Predicate: optional lambda expression whose body must return Boolean.
 
-A nested PostAction can use Source: "parent" to operate on the preceding activation's selected targets.
+PostAction declarations are recursively nestable to any depth supported by the source and runtime instruction budget. Each nested invocation can use Source: "parent" to operate on the immediately preceding invocation's selected targets; the selected target set is passed down one level at a time. PostAction arguments and selector expressions are evaluated in the lexical scope of their parent invocation, so they can reference parameters declared by that parent and by its ancestors. Semantic analysis validates those inherited parameter types before the program is published.
 
 ## Runtime context and collections
 
