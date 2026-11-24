@@ -476,4 +476,79 @@ public sealed class EndToEndRuntimeDslTests
     }
 
 
+
+    [Theory]
+    [InlineData("Weather")]
+    [InlineData("Upgrade")]
+    public void SpecialZoneCardsCanActivateCompiledDslEffects(string cardType)
+    {
+        var source = $$"""
+            effect {
+                Name: "boost",
+                Params: { amount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets {
+                        unit.Power = unit.Power + amount;
+                    };
+                }
+            }
+
+            card special {
+                Name: "Special Source";
+                Power: 0;
+                Faction: Neutral;
+                Type: {{cardType}};
+                Rank: Special;
+                Range: ["Melee"];
+                description: "Special source";
+                OnActivation: [
+                    {
+                        Type: "boost",
+                        Params: { amount: 2, },
+                        Selector: { Source: "field"; Single: false; },
+                    },
+                ];
+            }
+
+            card unit {
+                Name: "Unit";
+                Power: 3;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "Unit";
+                OnActivation: [];
+            }
+            """;
+        var compiled = new DslCompiler().CompileRuntimeProgram(source);
+        Assert.True(compiled.Success, string.Join(Environment.NewLine, compiled.Diagnostics));
+
+        var player = new Player("first");
+        var game = new Game(player, new Player("second"));
+        var special = compiled.Program!.CreateCardInstance("special", Row.Melee);
+        var unit = compiled.Program.CreateCardInstance("unit", Row.Melee);
+        game.AddToDeck(player, special);
+        game.AddToDeck(player, unit);
+        game.Draw(player);
+        game.Draw(player);
+        game.MoveCard(unit, player, CardZone.Field);
+
+        compiled.Program.Play(game, player, special);
+
+        Assert.Equal(5, unit.Power);
+        if (cardType == "Weather")
+        {
+            Assert.Contains(special, player.Weather);
+            Assert.Empty(player.Upgrades);
+        }
+        else
+        {
+            Assert.Contains(special, player.Upgrades);
+            Assert.Empty(player.Weather);
+        }
+        game.ValidateCardZones();
+    }
+
+
 }

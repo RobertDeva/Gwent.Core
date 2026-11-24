@@ -157,8 +157,8 @@ public sealed class RuntimeCardProgram
             throw new InvalidOperationException("Compiled card activation requires a game context.");
         if (!context.Game.ContainsCard(card))
             throw new ArgumentException("Activation card does not belong to the current game.", nameof(card));
-        if (card.Zone != Gwent.Engine.CardZone.Field)
-            throw new InvalidOperationException("Only a card on the field can activate its effects.");
+        if (card.Zone is not (Gwent.Engine.CardZone.Field or Gwent.Engine.CardZone.Weather or Gwent.Engine.CardZone.Upgrade))
+            throw new InvalidOperationException("Only a card in an active effect zone can activate its effects.");
         if (!StringComparer.Ordinal.Equals(card.OwnerId, context.TriggerPlayer.Id))
             throw new ArgumentException("The trigger player must own the activation card.", nameof(context));
         if (!Cards.TryGetValue(card.DefinitionId, out var definition))

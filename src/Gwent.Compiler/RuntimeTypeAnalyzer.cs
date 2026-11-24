@@ -161,7 +161,7 @@ public sealed class RuntimeTypeAnalyzer
         bool isPostAction)
     {
         var allowedSources = new HashSet<string>(
-            ["board", "field", "otherField", "hand", "otherHand", "deck", "otherDeck", "graveyard", "parent"],
+            ["board", "field", "otherField", "hand", "otherHand", "deck", "otherDeck", "graveyard", "weather", "upgrades", "otherWeather", "otherUpgrades", "parent"],
             StringComparer.Ordinal);
         if (!allowedSources.Contains(selector.Source))
             Add($"Effect '{effectId}' uses unknown selector source '{selector.Source}'.", selector.Single);
@@ -404,7 +404,7 @@ public sealed class RuntimeTypeAnalyzer
                 "TriggerPlayer" or "OtherPlayer" => RuntimeType.Player,
                 "SourceCard" => RuntimeType.Card,
                 "Game" => RuntimeType.Game,
-                "Hand" or "Deck" or "Field" or "Graveyard" or "Board" or "OtherHand" or "OtherDeck" or "OtherField" => RuntimeType.CardCollection,
+                "Hand" or "Deck" or "Field" or "Graveyard" or "Board" or "Weather" or "Upgrades" or "OtherHand" or "OtherDeck" or "OtherField" or "OtherWeather" or "OtherUpgrades" => RuntimeType.CardCollection,
                 _ => UnknownMember(name, effectId, member)
             },
             RuntimeType.CardCollection => name switch

@@ -84,6 +84,8 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "Hand" => RuntimeValue.FromZoneCards(context, player, CardZone.Hand),
         "Deck" => RuntimeValue.FromZoneCards(context, player, CardZone.Deck),
         "Field" => RuntimeValue.FromZoneCards(context, player, CardZone.Field),
+        "Weather" => RuntimeValue.FromZoneCards(context, player, CardZone.Weather),
+        "Upgrades" => RuntimeValue.FromZoneCards(context, player, CardZone.Upgrade),
         "Graveyard" => RuntimeValue.FromZoneCards(context, player, CardZone.Graveyard),
         "Board" => RuntimeValue.FromZoneCards(context, player, CardZone.Field),
         _ => throw UnknownMember()
@@ -111,6 +113,8 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "Hand" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Hand),
         "Deck" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Deck),
         "Field" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Field),
+        "Weather" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Weather),
+        "Upgrades" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Upgrade),
         "Graveyard" => RuntimeValue.FromZoneCards(context, context.TriggerPlayer, CardZone.Graveyard),
         "Board" => RuntimeValue.FromCards(context.Game is null
             ? context.TriggerPlayer.Field
@@ -118,6 +122,8 @@ public sealed record RuntimeMemberExpression(RuntimeExpression Target, string Me
         "OtherHand" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Hand),
         "OtherDeck" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Deck),
         "OtherField" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Field),
+        "OtherWeather" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Weather),
+        "OtherUpgrades" => RuntimeValue.FromZoneCards(context, OtherPlayer(context), CardZone.Upgrade),
         _ => throw UnknownMember()
     };
 

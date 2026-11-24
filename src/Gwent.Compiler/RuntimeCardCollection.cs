@@ -153,6 +153,8 @@ public sealed class RuntimeCardCollection
         CardZone.Deck => _owner!.Deck,
         CardZone.Hand => _owner!.Hand,
         CardZone.Field => _owner!.Field,
+        CardZone.Weather => _owner!.Weather,
+        CardZone.Upgrade => _owner!.Upgrades,
         CardZone.Graveyard => _owner!.Graveyard,
         _ => throw new ArgumentOutOfRangeException(nameof(_zone))
     };
@@ -168,6 +170,8 @@ public sealed class RuntimeCardCollection
         CardZone.Deck => owner.Deck,
         CardZone.Hand => owner.Hand,
         CardZone.Field => owner.Field,
+        CardZone.Weather => owner.Weather,
+        CardZone.Upgrade => owner.Upgrades,
         CardZone.Graveyard => owner.Graveyard,
         _ => throw new ArgumentOutOfRangeException(nameof(zone))
     };

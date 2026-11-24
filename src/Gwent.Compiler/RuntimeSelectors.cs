@@ -27,14 +27,18 @@ public static class RuntimeSourceResolver
             "board" when game is not null =>
                 game.First.Field.Concat(game.Second.Field).ToArray(),
             "field" => player.Field.ToArray(),
+            "weather" => player.Weather.ToArray(),
+            "upgrades" => player.Upgrades.ToArray(),
             "otherField" when opponent is not null => opponent.Field.ToArray(),
+            "otherWeather" when opponent is not null => opponent.Weather.ToArray(),
+            "otherUpgrades" when opponent is not null => opponent.Upgrades.ToArray(),
             "hand" => player.Hand.ToArray(),
             "otherHand" when opponent is not null => opponent.Hand.ToArray(),
             "deck" => player.Deck.ToArray(),
             "otherDeck" when opponent is not null => opponent.Deck.ToArray(),
             "graveyard" => player.Graveyard.ToArray(),
             "parent" when parentTargets is not null => parentTargets.ToArray(),
-            "board" or "otherField" or "otherHand" or "otherDeck" =>
+            "board" or "otherField" or "otherWeather" or "otherUpgrades" or "otherHand" or "otherDeck" =>
                 throw new InvalidOperationException($"Source '{source}' requires a game execution context."),
             "parent" => throw new InvalidOperationException("Source 'parent' is only valid inside a PostAction."),
             _ => throw new ArgumentException($"Unknown selector source '{source}'.", nameof(source))
