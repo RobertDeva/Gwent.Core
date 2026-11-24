@@ -101,4 +101,85 @@ public sealed class EndToEndRuntimeDslTests
         Assert.Equal(6, card.Power);
         game.ValidateCardZones();
     }
+
+    [Fact]
+    public void CompiledPostActionExecutesAgainstExactlyTheParentTargets()
+    {
+        var source = """
+            effect {
+                Name: "rally",
+                Params: { amount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets {
+                        unit.Power = unit.Power + amount;
+                    };
+                }
+            }
+
+            effect {
+                Name: "follow-up",
+                Params: { amount: Number, },
+                Action: (targets, context) => {
+                    for unit in targets {
+                        unit.Power = unit.Power + amount;
+                    };
+                }
+            }
+
+            card ally {
+                Name: "Ally";
+                Power: 2;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "An ally";
+            }
+
+            card commander {
+                Name: "Commander";
+                Power: 1;
+                Faction: Northern;
+                Type: Unit;
+                Rank: Silver;
+                Range: ["Melee"];
+                description: "A commander";
+                OnActivation: [
+                    {
+                        Type: "rally",
+                        Params: { amount: 1, },
+                        Selector: {
+                            Source: "field";
+                            Single: false;
+                            Predicate: (unit) => unit.Power > 0;
+                        },
+                        PostAction: {
+                            Type: "follow-up",
+                            Params: { amount: 2, },
+                        },
+                    },
+                ];
+            }
+            """;
+
+        var compiled = new DslCompiler().CompileRuntimeProgram(source);
+        Assert.True(compiled.Success, string.Join(Environment.NewLine, compiled.Diagnostics));
+
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var ally = compiled.Program!.CreateCardInstance("ally", Row.Melee);
+        var commander = compiled.Program.CreateCardInstance("commander", Row.Melee);
+        game.AddToDeck(player, ally);
+        game.AddToDeck(player, commander);
+        game.MoveCard(ally, player, CardZone.Field);
+        game.Draw(player);
+
+        var result = compiled.Program.Play(game, player, commander);
+
+        Assert.Single(result);
+        Assert.Equal(5, ally.Power);
+        Assert.Equal(4, commander.Power);
+        game.ValidateCardZones();
+    }
+
 }
