@@ -4,7 +4,7 @@
 
 - .NET 10 solution with Engine, Compiler, Console, and unit/integration test projects.
 - Reusable card definitions and independent physical instances.
-- Deck, hand, Melee/Ranged/Siege field rows, and graveyard with validated transitions.
+- Deck, hand, Melee/Ranged/Siege field rows, and graveyard with validated transitions. An active player can destroy a card on either player's field; the card enters its owner's graveyard and source-bound effects are deactivated.
 - Row and total scoring derived from board state.
 - Active-player turns, passing, round resolution, round points, and best-of-three match completion.
 - Staged compiler pipeline: lexer, token stream with source locations, parser, typed declaration AST, semantic analyzer, immutable compilation result, and effect executor.
