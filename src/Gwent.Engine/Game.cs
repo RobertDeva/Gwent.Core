@@ -471,7 +471,10 @@ public sealed class Game
     private readonly HashSet<Player> _passedPlayers = [];
     private readonly List<ActiveEffect> _activeEffects = [];
     private readonly Dictionary<Guid, Card> _cardsByInstance = [];
+    private readonly Dictionary<Player, int> _mulligansUsed = [];
     private Player _roundStarter;
+    private bool _matchInitialized;
+    private bool _mulliganClosed;
     private bool _hasPlayedThisTurn;
 
     public Game(Player first, Player second)
@@ -493,6 +496,7 @@ public sealed class Game
     public int SecondRoundsWon { get; private set; }
     public Player? LastRoundWinner { get; private set; }
     public bool IsFinished { get; private set; }
+    public bool IsInitialized => _matchInitialized;
     public Player? Winner => IsFinished
         ? FirstRoundsWon == SecondRoundsWon ? null : FirstRoundsWon > SecondRoundsWon ? First : Second
         : null;
@@ -518,6 +522,8 @@ public sealed class Game
         EnsureNotFinished();
         ValidatePlayer(player);
         ArgumentNullException.ThrowIfNull(deck);
+        if (_matchInitialized)
+            throw new InvalidOperationException("Decks cannot be loaded after match initialization.");
 
         if (player.LeaderDefinition is not null ||
             player.Deck.Count != 0 || player.Hand.Count != 0 ||
@@ -531,15 +537,85 @@ public sealed class Game
         player.LeaderDefinition = deck.Leader;
     }
 
+    public void InitializeMatch(Random? random = null)
+    {
+        EnsureNotFinished();
+        if (_matchInitialized)
+            throw new InvalidOperationException("The match has already been initialized.");
+        if (First.LeaderDefinition is null || Second.LeaderDefinition is null)
+            throw new InvalidOperationException("Both players must load a validated deck before match initialization.");
+        if (First.Deck.Count < DeckDefinition.MinimumCardCount ||
+            Second.Deck.Count < DeckDefinition.MinimumCardCount)
+            throw new InvalidOperationException(
+                $"Both players must have at least {DeckDefinition.MinimumCardCount} cards before match initialization.");
+
+        var randomSource = random ?? new Random();
+        ShuffleDeck(First, randomSource);
+        ShuffleDeck(Second, randomSource);
+        for (var draw = 0; draw < 10; draw++)
+        {
+            First.DrawTopCard();
+            Second.DrawTopCard();
+        }
+
+        _matchInitialized = true;
+        ValidateCardZones();
+    }
+
+    public int Mulligan(Player player, IEnumerable<Card> cards, Random? random = null)
+    {
+        ValidatePlayer(player);
+        EnsureNotFinished();
+        ArgumentNullException.ThrowIfNull(cards);
+        if (!_matchInitialized)
+            throw new InvalidOperationException("The match must be initialized before mulligan.");
+        if (_mulliganClosed)
+            throw new InvalidOperationException("The mulligan phase has already ended.");
+
+        var selected = cards.ToArray();
+        if (selected.Any(card => card is null))
+            throw new ArgumentException("Mulligan selections cannot contain null cards.", nameof(cards));
+        var used = _mulligansUsed.GetValueOrDefault(player);
+        if (used + selected.Length > 2)
+            throw new ArgumentException("Each player can mulligan at most two cards.", nameof(cards));
+        if (selected.Select(card => card.InstanceId).Distinct().Count() != selected.Length)
+            throw new ArgumentException("A card instance cannot be selected for mulligan more than once.", nameof(cards));
+
+        foreach (var card in selected)
+        {
+            if (!ReferenceEquals(card, _cardsByInstance.GetValueOrDefault(card.InstanceId)) ||
+                card.Zone != CardZone.Hand ||
+                !StringComparer.Ordinal.Equals(card.OwnerId, player.Id) ||
+                !player.Hand.Any(existing => ReferenceEquals(existing, card)))
+                throw new ArgumentException("Every mulligan selection must be a distinct card in that player's hand.", nameof(cards));
+        }
+
+        if (selected.Length == 0) return 0;
+
+        foreach (var card in selected)
+            MoveCard(card, player, CardZone.Deck, DeckPosition.Bottom);
+
+        ShuffleZone(player, CardZone.Deck, random ?? new Random());
+        for (var draw = 0; draw < selected.Length; draw++)
+            player.DrawTopCard();
+
+        _mulligansUsed[player] = used + selected.Length;
+        ValidateCardZones();
+        return selected.Length;
+    }
+
     public Card? Draw(Player player)
     {
         ValidateActivePlayer(player);
+        CloseMulliganPhase();
+        if (player.Hand.Count >= 10) return null;
         return player.DrawTopCard();
     }
 
     public void Play(Player player, Card card)
     {
         ValidateActivePlayer(player);
+        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(card);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Hand ||
             !player.Hand.Any(existing => existing.InstanceId == card.InstanceId))
@@ -553,6 +629,7 @@ public sealed class Game
     public void Destroy(Player player, Card card)
     {
         ValidateActivePlayer(player);
+        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(card);
         var owner = StringComparer.Ordinal.Equals(card.OwnerId, First.Id) ? First :
             StringComparer.Ordinal.Equals(card.OwnerId, Second.Id) ? Second :
@@ -569,6 +646,7 @@ public sealed class Game
     public void ApplyEffect(Player player, Card card, CardEffect effect)
     {
         ValidateActivePlayer(player);
+        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(card);
         ArgumentNullException.ThrowIfNull(effect);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
@@ -592,6 +670,7 @@ public sealed class Game
         EffectDuration duration = EffectDuration.UntilRoundEnd)
     {
         ValidateActivePlayer(player);
+        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(target);
         if (!First.Field.Concat(Second.Field).Any(card => card.InstanceId == target.InstanceId))
             throw new InvalidOperationException("Power modifiers can only target a card currently on the field.");
@@ -696,6 +775,7 @@ public sealed class Game
     public void EndTurn()
     {
         EnsureNotFinished();
+        CloseMulliganPhase();
         var other = Other(CurrentPlayer);
         if (!_passedPlayers.Contains(other)) CurrentPlayer = other;
         _hasPlayedThisTurn = false;
@@ -704,6 +784,7 @@ public sealed class Game
     public void Pass(Player player)
     {
         ValidateActivePlayer(player);
+        CloseMulliganPhase();
         _passedPlayers.Add(player);
         var other = Other(player);
         if (_passedPlayers.Contains(other))
@@ -805,6 +886,8 @@ public sealed class Game
             CurrentPlayer = _roundStarter;
         }
     }
+
+    private void CloseMulliganPhase() => _mulliganClosed = true;
 
     private Player Other(Player player) => ReferenceEquals(player, First) ? Second : First;
 
