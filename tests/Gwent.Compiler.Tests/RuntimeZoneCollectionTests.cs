@@ -25,6 +25,7 @@ public sealed class RuntimeZoneCollectionTests
         new ExpressionParser("context.Deck.Push(card)").Parse()!.Evaluate(context);
         Assert.Equal(CardZone.Deck, card.Zone);
         Assert.Contains(card, player.Deck);
+        game.ValidateCardZones();
     }
 
     [Fact]

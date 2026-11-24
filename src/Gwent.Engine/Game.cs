@@ -637,32 +637,40 @@ public sealed class Game
 
     public void ValidateCardZones()
     {
-        var cardsInZones = First.Deck.Concat(First.Hand).Concat(First.Field).Concat(First.Graveyard)
-            .Concat(Second.Deck).Concat(Second.Hand).Concat(Second.Field).Concat(Second.Graveyard)
+        var zones = new[]
+        {
+            (Cards: First.Deck, Owner: First, Zone: CardZone.Deck),
+            (Cards: First.Hand, Owner: First, Zone: CardZone.Hand),
+            (Cards: First.Field, Owner: First, Zone: CardZone.Field),
+            (Cards: First.Graveyard, Owner: First, Zone: CardZone.Graveyard),
+            (Cards: Second.Deck, Owner: Second, Zone: CardZone.Deck),
+            (Cards: Second.Hand, Owner: Second, Zone: CardZone.Hand),
+            (Cards: Second.Field, Owner: Second, Zone: CardZone.Field),
+            (Cards: Second.Graveyard, Owner: Second, Zone: CardZone.Graveyard)
+        };
+        var entries = zones
+            .SelectMany(zone => zone.Cards.Select(card =>
+                (Card: card, zone.Owner, zone.Zone)))
             .ToArray();
-        var grouped = cardsInZones.GroupBy(card => card.InstanceId).ToArray();
+        var grouped = entries.GroupBy(entry => entry.Card.InstanceId).ToArray();
+
         if (grouped.Any(group => group.Count() != 1))
             throw new InvalidOperationException("A card instance appears in more than one game zone.");
+        if (grouped.Length != _cardsByInstance.Count)
+            throw new InvalidOperationException("The game contains registered cards that are missing from its zones.");
 
-        foreach (var card in _cardsByInstance.Values)
+        foreach (var group in grouped)
         {
-            var matches = grouped.Where(group => group.Key == card.InstanceId).ToArray();
-            if (card.Zone == CardZone.Unassigned || matches.Length != 1)
+            var entry = group.Single();
+            if (!_cardsByInstance.TryGetValue(entry.Card.InstanceId, out var registered) ||
+                !ReferenceEquals(registered, entry.Card))
+                throw new InvalidOperationException("A game zone contains an unregistered card instance.");
+            if (entry.Card.Zone != entry.Zone)
                 throw new InvalidOperationException(
-                    $"Card instance '{card.InstanceId}' was not returned to exactly one game zone.");
-            var zoneOwner = ReferenceEquals(First, FindZoneOwner(card)) ? First : Second;
-            if (!StringComparer.Ordinal.Equals(card.OwnerId, zoneOwner.Id))
+                    $"Card instance '{entry.Card.InstanceId}' reports zone '{entry.Card.Zone}' but is stored in '{entry.Zone}'.");
+            if (!StringComparer.Ordinal.Equals(entry.Card.OwnerId, entry.Owner.Id))
                 throw new InvalidOperationException("Card owner metadata does not match its zone owner.");
         }
-    }
-
-    private Player FindZoneOwner(Card card)
-    {
-        if (First.Deck.Concat(First.Hand).Concat(First.Field).Concat(First.Graveyard)
-            .Any(existing => existing.InstanceId == card.InstanceId)) return First;
-        if (Second.Deck.Concat(Second.Hand).Concat(Second.Field).Concat(Second.Graveyard)
-            .Any(existing => existing.InstanceId == card.InstanceId)) return Second;
-        throw new InvalidOperationException("Card instance is not present in any game zone.");
     }
 
     public void EndTurn()
