@@ -56,11 +56,11 @@ card vanguard {
 
 A card activation references a reusable effect by its Type value. Arguments bind by parameter name and are checked against declared parameter types. A selector contains:
 
-- Source: board, field, otherField, hand, otherHand, deck, otherDeck, or parent inside a PostAction.
+- Source: board, field, otherField, hand, otherHand, deck, otherDeck, graveyard, or parent inside a PostAction.
 - Single: Boolean expression; when true, only the first matching card is selected.
 - Predicate: optional lambda expression whose body must return Boolean.
 
-PostAction declarations are recursively nestable to any depth supported by the source and runtime instruction budget. Each nested invocation can use Source: "parent" to operate on the immediately preceding invocation's selected targets; the selected target set is passed down one level at a time. PostAction arguments and selector expressions are evaluated in the lexical scope of their parent invocation, so they can reference parameters declared by that parent and by its ancestors. Semantic analysis validates those inherited parameter types before the program is published.
+PostAction declarations are recursively nestable to any depth supported by the source and runtime instruction budget. Each nested invocation can use Source: "parent" to operate on the immediately preceding invocation's selected targets; the selected target set is passed down one level at a time. PostAction arguments and selector expressions are evaluated in the lexical scope of their parent invocation, so they can reference parameters declared by that parent and its ancestors, as well as variables declared in the parent Action's top-level scope. Variables declared inside for/while child scopes do not escape into PostAction. Semantic analysis validates inherited types before the program is published.
 
 ## Runtime context and collections
 
