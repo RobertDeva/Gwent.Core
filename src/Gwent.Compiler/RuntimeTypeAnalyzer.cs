@@ -119,8 +119,39 @@ public sealed class RuntimeTypeAnalyzer
             foreach (var parameter in definition.Parameters)
                 postActionVariables[parameter.Name] = ToRuntimeType(parameter.Type);
 
+            AddVisibleActionVariables(definition.Action, postActionVariables, definition.Id);
             AnalyzeInvocation(catalog, invocation.PostAction, postActionVariables, isPostAction: true);
         }
+    }
+
+    private void AddVisibleActionVariables(
+        IEnumerable<RuntimeStatement> statements,
+        Dictionary<string, RuntimeType> variables,
+        string effectId)
+    {
+        // Only declarations in the action's top-level scope survive until PostAction.
+        // While and for bodies execute in child scopes and must not leak their locals.
+        foreach (var statement in statements)
+        {
+            if (statement is not DefineVariableStatement define ||
+                variables.ContainsKey(define.Name))
+                continue;
+
+            var inferredType = InferWithoutDiagnostics(define.Value, variables, effectId);
+            variables.Add(define.Name, inferredType);
+        }
+    }
+
+    private RuntimeType InferWithoutDiagnostics(
+        RuntimeExpression expression,
+        IReadOnlyDictionary<string, RuntimeType> variables,
+        string effectId)
+    {
+        var diagnosticCount = _diagnostics.Count;
+        var inferredType = Infer(expression, variables, effectId);
+        if (_diagnostics.Count > diagnosticCount)
+            _diagnostics.RemoveRange(diagnosticCount, _diagnostics.Count - diagnosticCount);
+        return inferredType;
     }
 
     private void ValidateSelector(
