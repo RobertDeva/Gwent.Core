@@ -488,7 +488,7 @@ public sealed class EndToEndRuntimeDslTests
                 Params: { amount: Number, },
                 Action: (targets, context) => {
                     for unit in targets {
-                        unit.Power = unit.Power + amount;
+                        unit.Power = unit.Power + amount + context.Weather.Count + context.Upgrades.Count;
                     };
                 }
             }
@@ -536,7 +536,10 @@ public sealed class EndToEndRuntimeDslTests
 
         compiled.Program.Play(game, player, special);
 
-        Assert.Equal(5, unit.Power);
+        Assert.Equal(6, unit.Power);
+        var executionContext = new RuntimeExecutionContext(player, special, game);
+        var selectorSource = cardType == "Weather" ? "weather" : "upgrades";
+        Assert.Contains(special, RuntimeSourceResolver.Resolve(executionContext, selectorSource));
         if (cardType == "Weather")
         {
             Assert.Contains(special, player.Weather);
