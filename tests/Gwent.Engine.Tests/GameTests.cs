@@ -528,4 +528,37 @@ public sealed class GameTests
     }
 
 
+
+    [Fact]
+    public void PersistentRowEffectsDoNotModifyGoldUnits()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var silverDefinition = new CardDefinition(
+            "silver", "Silver Unit", 5, "Northern", "Unit", "Silver",
+            [Row.Melee], "Silver unit");
+        var goldDefinition = new CardDefinition(
+            "gold", "Gold Unit", 10, "Northern", "Unit", "Gold",
+            [Row.Melee], "Gold unit");
+        var source = new Card("weather", "Weather", 0, Row.Melee, "weather");
+        var silver = silverDefinition.CreateInstance(Row.Melee);
+        var gold = goldDefinition.CreateInstance(Row.Melee);
+        game.AddToDeck(first, source);
+        game.AddToDeck(first, silver);
+        game.AddToDeck(second, gold);
+        game.MoveCard(source, first, CardZone.Field);
+        game.MoveCard(silver, first, CardZone.Field);
+        game.MoveCard(gold, second, CardZone.Field);
+
+        game.ApplyEffect(first, source, new CardEffect(
+            "weather", 1, EffectDuration.WhileSourceOnField,
+            EffectOperation.Set, EffectTargetScope.BothPlayersInRow));
+
+        Assert.Equal(1, silver.Power);
+        Assert.Equal(10, gold.Power);
+        game.ValidateCardZones();
+    }
+
+
 }

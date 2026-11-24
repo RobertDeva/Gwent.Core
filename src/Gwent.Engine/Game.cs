@@ -856,7 +856,10 @@ public sealed class Game
             ? owner.Field
             : First.Field.Concat(Second.Field).ToArray();
 
-        return candidates.Where(card => card.InstanceId != source.InstanceId && card.Row == source.Row);
+        return candidates.Where(card =>
+            card.InstanceId != source.InstanceId &&
+            card.Row == source.Row &&
+            !StringComparer.OrdinalIgnoreCase.Equals(card.Rank, "Gold"));
     }
 
     private void ResolveRound()
