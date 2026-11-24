@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 namespace Gwent.Engine;
 
 public enum Row { Melee, Ranged, Siege }
-public enum CardZone { Unassigned, Deck, Hand, Field, Graveyard }
+public enum CardZone { Unassigned, Deck, Hand, Field, Weather, Upgrade, Graveyard }
 public enum DeckPosition { Top, Bottom }
 public enum EffectDuration { Instant, WhileSourceOnField, UntilRoundEnd }
 public enum EffectOperation { Add, Set, Multiply }
@@ -47,7 +47,8 @@ public sealed class CardDefinition
         string type,
         string rank,
         IEnumerable<Row> allowedRows,
-        string description)
+        string description,
+        string? effectId = null)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Card definition id is required.", nameof(id));
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Card name is required.", nameof(name));
@@ -68,6 +69,7 @@ public sealed class CardDefinition
         Rank = rank;
         AllowedRows = Array.AsReadOnly(rows);
         Description = description ?? throw new ArgumentNullException(nameof(description));
+        EffectId = string.IsNullOrWhiteSpace(effectId) ? null : effectId;
     }
 
     public string Id { get; }
@@ -78,6 +80,7 @@ public sealed class CardDefinition
     public string Rank { get; }
     public IReadOnlyList<Row> AllowedRows { get; }
     public string Description { get; }
+    public string? EffectId { get; }
 
     public Card CreateInstance(Row row)
     {
@@ -131,6 +134,7 @@ public sealed class Card
         Type = definition.Type;
         Rank = definition.Rank;
         Description = definition.Description;
+        EffectId = definition.EffectId;
         AllowedRows = definition.AllowedRows;
     }
 
@@ -326,9 +330,13 @@ public sealed class Player
 {
     private readonly List<Card> _deck = [];
     private readonly List<Card> _hand = [];
+    private readonly List<Card> _weather = [];
+    private readonly List<Card> _upgrades = [];
     private readonly List<Card> _graveyard = [];
     private readonly ReadOnlyCollection<Card> _deckView;
     private readonly ReadOnlyCollection<Card> _handView;
+    private readonly ReadOnlyCollection<Card> _weatherView;
+    private readonly ReadOnlyCollection<Card> _upgradesView;
     private readonly ReadOnlyCollection<Card> _graveyardView;
 
     public Player(string id)
@@ -338,6 +346,8 @@ public sealed class Player
         Board = new Board();
         _deckView = _deck.AsReadOnly();
         _handView = _hand.AsReadOnly();
+        _weatherView = _weather.AsReadOnly();
+        _upgradesView = _upgrades.AsReadOnly();
         _graveyardView = _graveyard.AsReadOnly();
     }
 
@@ -347,6 +357,8 @@ public sealed class Player
     public IReadOnlyList<Card> Deck => _deckView;
     public IReadOnlyList<Card> Hand => _handView;
     public IReadOnlyList<Card> Field => Board.Cards;
+    public IReadOnlyList<Card> Weather => _weatherView;
+    public IReadOnlyList<Card> Upgrades => _upgradesView;
     public IReadOnlyList<Card> Graveyard => _graveyardView;
 
     internal Card? DrawTopCard()
@@ -362,19 +374,24 @@ public sealed class Player
 
     internal void AddToDeck(Card card) => _deck.Add(card);
 
-    internal void PlayFromHand(Card card)
+    internal void PlayFromHand(Card card, CardZone destination)
     {
         Remove(_hand, card, "hand");
-        card.MoveTo(CardZone.Field);
-        Board.Add(card);
+        card.MoveTo(destination);
+        AddToZone(card, destination, DeckPosition.Top);
     }
 
     internal void MoveToGraveyard(Card card)
     {
-        if (card.Zone == CardZone.Field) Board.Remove(card);
-        else if (card.Zone == CardZone.Hand) Remove(_hand, card, "hand");
-        else if (card.Zone == CardZone.Deck) Remove(_deck, card, "deck");
-        else throw new InvalidOperationException("Card is not in a movable zone.");
+        switch (card.Zone)
+        {
+            case CardZone.Field: Board.Remove(card); break;
+            case CardZone.Hand: Remove(_hand, card, "hand"); break;
+            case CardZone.Deck: Remove(_deck, card, "deck"); break;
+            case CardZone.Weather: Remove(_weather, card, "weather"); break;
+            case CardZone.Upgrade: Remove(_upgrades, card, "upgrades"); break;
+            default: throw new InvalidOperationException("Card is not in a movable zone.");
+        }
         card.MoveTo(CardZone.Graveyard);
         _graveyard.Add(card);
     }
@@ -384,6 +401,25 @@ public sealed class Player
         foreach (var card in Board.Cards) MoveToGraveyard(card);
     }
 
+    internal void ClearWeatherToGraveyard()
+    {
+        foreach (var card in _weather.ToArray()) MoveToGraveyard(card);
+    }
+
+    internal void ClearUpgradesToGraveyard()
+    {
+        foreach (var card in _upgrades.ToArray()) MoveToGraveyard(card);
+    }
+
+    internal bool ContainsInActiveZone(Card card) =>
+        card.Zone switch
+        {
+            CardZone.Field => Field.Any(existing => ReferenceEquals(existing, card)),
+            CardZone.Weather => _weather.Any(existing => ReferenceEquals(existing, card)),
+            CardZone.Upgrade => _upgrades.Any(existing => ReferenceEquals(existing, card)),
+            _ => false
+        };
+
     internal void RemoveFromCurrentZone(Card card)
     {
         switch (card.Zone)
@@ -391,6 +427,8 @@ public sealed class Player
             case CardZone.Deck: Remove(_deck, card, "deck"); break;
             case CardZone.Hand: Remove(_hand, card, "hand"); break;
             case CardZone.Field: Board.Remove(card); break;
+            case CardZone.Weather: Remove(_weather, card, "weather"); break;
+            case CardZone.Upgrade: Remove(_upgrades, card, "upgrades"); break;
             case CardZone.Graveyard: Remove(_graveyard, card, "graveyard"); break;
             case CardZone.Unassigned: break;
             default: throw new ArgumentOutOfRangeException(nameof(card));
@@ -407,6 +445,8 @@ public sealed class Player
                 break;
             case CardZone.Hand: InsertByPosition(_hand, card, deckPosition); break;
             case CardZone.Field: Board.Add(card, deckPosition); break;
+            case CardZone.Weather: InsertByPosition(_weather, card, deckPosition); break;
+            case CardZone.Upgrade: InsertByPosition(_upgrades, card, deckPosition); break;
             case CardZone.Graveyard: InsertByPosition(_graveyard, card, deckPosition); break;
             case CardZone.Unassigned: break;
             default: throw new ArgumentOutOfRangeException(nameof(zone));
@@ -420,6 +460,8 @@ public sealed class Player
             case CardZone.Deck: Reorder(_deck, card, position, "deck"); break;
             case CardZone.Hand: Reorder(_hand, card, position, "hand"); break;
             case CardZone.Field: Board.Reorder(card, position); break;
+            case CardZone.Weather: Reorder(_weather, card, position, "weather"); break;
+            case CardZone.Upgrade: Reorder(_upgrades, card, position, "upgrades"); break;
             case CardZone.Graveyard: Reorder(_graveyard, card, position, "graveyard"); break;
             case CardZone.Unassigned:
                 throw new InvalidOperationException("An unassigned card cannot be reordered within a zone.");
@@ -447,6 +489,8 @@ public sealed class Player
             case CardZone.Deck: ShuffleList(_deck, random); break;
             case CardZone.Hand: ShuffleList(_hand, random); break;
             case CardZone.Field: Board.Shuffle(random); break;
+            case CardZone.Weather: ShuffleList(_weather, random); break;
+            case CardZone.Upgrade: ShuffleList(_upgrades, random); break;
             case CardZone.Graveyard: ShuffleList(_graveyard, random); break;
             default: throw new ArgumentOutOfRangeException(nameof(zone), "Only assigned player zones can be shuffled.");
         }
@@ -535,7 +579,8 @@ public sealed class Game
 
         if (player.LeaderDefinition is not null ||
             player.Deck.Count != 0 || player.Hand.Count != 0 ||
-            player.Field.Count != 0 || player.Graveyard.Count != 0)
+            player.Field.Count != 0 || player.Weather.Count != 0 ||
+            player.Upgrades.Count != 0 || player.Graveyard.Count != 0)
             throw new InvalidOperationException("A deck can only be loaded into a player with no registered cards.");
 
         var instances = deck.CreateCardInstances();
@@ -637,9 +682,34 @@ public sealed class Game
         if (!card.AllowedRows.Contains(row))
             throw new InvalidOperationException($"Card '{card.DefinitionId}' cannot be played in row '{row}'.");
         if (_hasPlayedThisTurn) throw new InvalidOperationException("A player can play only one card per turn.");
+
+        var destination = card.Type switch
+        {
+            var type when StringComparer.OrdinalIgnoreCase.Equals(type, "Weather") => CardZone.Weather,
+            var type when StringComparer.OrdinalIgnoreCase.Equals(type, "Upgrade") => CardZone.Upgrade,
+            var type when StringComparer.OrdinalIgnoreCase.Equals(type, "Leader") =>
+                throw new InvalidOperationException("Leader cards cannot be played as field cards."),
+            _ => CardZone.Field
+        };
+
+        if (destination == CardZone.Weather)
+        {
+            foreach (var existing in First.Weather.Concat(Second.Weather)
+                         .Where(existing => existing.Row == row).ToArray())
+            {
+                var existingOwner = StringComparer.Ordinal.Equals(existing.OwnerId, First.Id) ? First : Second;
+                MoveCard(existing, existingOwner, CardZone.Graveyard);
+            }
+        }
+        else if (destination == CardZone.Upgrade)
+        {
+            foreach (var existing in player.Upgrades.Where(existing => existing.Row == row).ToArray())
+                MoveCard(existing, player, CardZone.Graveyard);
+        }
+
         CloseMulliganPhase();
         card.SelectRow(row);
-        player.PlayFromHand(card);
+        player.PlayFromHand(card, destination);
         _hasPlayedThisTurn = true;
         RefreshPersistentEffects();
     }
@@ -666,9 +736,8 @@ public sealed class Game
         ValidateActivePlayer(player);
         ArgumentNullException.ThrowIfNull(card);
         ArgumentNullException.ThrowIfNull(effect);
-        if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
-            !player.Field.Any(existing => ReferenceEquals(existing, card)))
-            throw new InvalidOperationException("Effects can only be applied by a card on the active player's field.");
+        if (card.OwnerId != player.Id || !player.ContainsInActiveZone(card))
+            throw new InvalidOperationException("Effects can only be applied by a card in one of the active player's effect zones.");
 
         card.TryApplyEffect(effect);
         CloseMulliganPhase();
@@ -720,7 +789,7 @@ public sealed class Game
             return;
         }
 
-        if (card.Zone == CardZone.Field)
+        if (IsActiveEffectZone(card.Zone))
         {
             DeactivateEffectsFrom(card);
             card.RemovePersistentModifiers();
@@ -759,10 +828,14 @@ public sealed class Game
             (Cards: First.Deck, Owner: First, Zone: CardZone.Deck),
             (Cards: First.Hand, Owner: First, Zone: CardZone.Hand),
             (Cards: First.Field, Owner: First, Zone: CardZone.Field),
+            (Cards: First.Weather, Owner: First, Zone: CardZone.Weather),
+            (Cards: First.Upgrades, Owner: First, Zone: CardZone.Upgrade),
             (Cards: First.Graveyard, Owner: First, Zone: CardZone.Graveyard),
             (Cards: Second.Deck, Owner: Second, Zone: CardZone.Deck),
             (Cards: Second.Hand, Owner: Second, Zone: CardZone.Hand),
             (Cards: Second.Field, Owner: Second, Zone: CardZone.Field),
+            (Cards: Second.Weather, Owner: Second, Zone: CardZone.Weather),
+            (Cards: Second.Upgrades, Owner: Second, Zone: CardZone.Upgrade),
             (Cards: Second.Graveyard, Owner: Second, Zone: CardZone.Graveyard)
         };
         var entries = zones
@@ -840,7 +913,7 @@ public sealed class Game
 
         foreach (var active in _activeEffects)
         {
-            if (active.Source.Zone != CardZone.Field) continue;
+            if (!IsActiveEffectZone(active.Source.Zone)) continue;
             foreach (var target in SelectTargets(active.Source, active.Effect))
                 target.SetPersistentModifier(active.Source, active.Effect);
         }
@@ -897,6 +970,10 @@ public sealed class Game
         _activeEffects.Clear();
         First.ClearFieldToGraveyard();
         Second.ClearFieldToGraveyard();
+        First.ClearWeatherToGraveyard();
+        Second.ClearWeatherToGraveyard();
+        First.ClearUpgradesToGraveyard();
+        Second.ClearUpgradesToGraveyard();
         _passedPlayers.Clear();
         _hasPlayedThisTurn = false;
 
@@ -907,6 +984,9 @@ public sealed class Game
             CurrentPlayer = _roundStarter;
         }
     }
+
+    private static bool IsActiveEffectZone(CardZone zone) =>
+        zone is CardZone.Field or CardZone.Weather or CardZone.Upgrade;
 
     private void CloseMulliganPhase() => _mulliganClosed = true;
 

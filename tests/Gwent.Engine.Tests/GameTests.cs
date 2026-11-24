@@ -561,4 +561,92 @@ public sealed class GameTests
     }
 
 
+
+    [Fact]
+    public void WeatherZoneSourceAppliesAcrossBothFieldsUntilItLeavesWeatherZone()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var unitDefinition = new CardDefinition(
+            "unit", "Silver Unit", 5, "Northern", "Unit", "Silver",
+            [Row.Melee], "Silver unit");
+        var weatherDefinition = new CardDefinition(
+            "weather", "Rain", 0, "Neutral", "Weather", "Special",
+            [Row.Melee], "Melee weather", "rain");
+        var firstUnit = unitDefinition.CreateInstance(Row.Melee);
+        var secondUnit = unitDefinition.CreateInstance(Row.Melee);
+        var weather = weatherDefinition.CreateInstance(Row.Melee);
+        game.AddToDeck(first, firstUnit);
+        game.AddToDeck(first, weather);
+        game.AddToDeck(second, secondUnit);
+
+        game.Draw(first);
+        game.Draw(first);
+        game.Play(first, firstUnit);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, secondUnit);
+        game.EndTurn();
+        game.Play(first, weather);
+        game.ApplyEffect(first, weather, new CardEffect(
+            "rain", 1, EffectDuration.WhileSourceOnField,
+            EffectOperation.Set, EffectTargetScope.BothPlayersInRow));
+
+        Assert.Equal(1, firstUnit.Power);
+        Assert.Equal(1, secondUnit.Power);
+        Assert.Contains(weather, first.Weather);
+
+        game.MoveCard(weather, first, CardZone.Graveyard);
+
+        Assert.Equal(5, firstUnit.Power);
+        Assert.Equal(5, secondUnit.Power);
+        Assert.Contains(weather, first.Graveyard);
+        game.ValidateCardZones();
+    }
+
+    [Fact]
+    public void UpgradeZoneSourceOnlyAffectsItsOwnersRowAndExpiresWhenRemoved()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var unitDefinition = new CardDefinition(
+            "unit", "Silver Unit", 5, "Northern", "Unit", "Silver",
+            [Row.Melee], "Silver unit");
+        var upgradeDefinition = new CardDefinition(
+            "horn", "Horn", 0, "Neutral", "Upgrade", "Special",
+            [Row.Melee], "Melee boost", "horn");
+        var firstUnit = unitDefinition.CreateInstance(Row.Melee);
+        var secondUnit = unitDefinition.CreateInstance(Row.Melee);
+        var upgrade = upgradeDefinition.CreateInstance(Row.Melee);
+        game.AddToDeck(first, firstUnit);
+        game.AddToDeck(first, upgrade);
+        game.AddToDeck(second, secondUnit);
+
+        game.Draw(first);
+        game.Draw(first);
+        game.Play(first, firstUnit);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, secondUnit);
+        game.EndTurn();
+        game.Play(first, upgrade);
+        game.ApplyEffect(first, upgrade, new CardEffect(
+            "horn", 2, EffectDuration.WhileSourceOnField,
+            EffectOperation.Add, EffectTargetScope.OwnRow));
+
+        Assert.Equal(7, firstUnit.Power);
+        Assert.Equal(5, secondUnit.Power);
+        Assert.Contains(upgrade, first.Upgrades);
+
+        game.MoveCard(upgrade, first, CardZone.Graveyard);
+
+        Assert.Equal(5, firstUnit.Power);
+        Assert.Equal(5, secondUnit.Power);
+        Assert.Contains(upgrade, first.Graveyard);
+        game.ValidateCardZones();
+    }
+
+
 }
