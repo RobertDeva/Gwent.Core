@@ -649,4 +649,78 @@ public sealed class GameTests
     }
 
 
+
+    [Fact]
+    public void PlayingWeatherInSameRowReplacesExistingWeatherAndRoundCleanupGravesIt()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var definition = new CardDefinition(
+            "weather", "Rain", 0, "Neutral", "Weather", "Special",
+            [Row.Melee], "Melee weather");
+        var firstWeather = definition.CreateInstance(Row.Melee);
+        var secondWeather = definition.CreateInstance(Row.Melee);
+        game.AddToDeck(first, firstWeather);
+        game.AddToDeck(second, secondWeather);
+
+        game.Draw(first);
+        game.Play(first, firstWeather);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, secondWeather);
+
+        Assert.Empty(first.Weather);
+        Assert.Contains(firstWeather, first.Graveyard);
+        Assert.Contains(secondWeather, second.Weather);
+        game.ValidateCardZones();
+
+        game.Pass(second);
+        game.Pass(first);
+
+        Assert.Empty(second.Weather);
+        Assert.Contains(secondWeather, second.Graveyard);
+        game.ValidateCardZones();
+    }
+
+    [Fact]
+    public void PlayingUpgradeReplacesOnlySameOwnersUpgradeAndRoundCleanupGravesIt()
+    {
+        var first = new Player("first");
+        var second = new Player("second");
+        var game = new Game(first, second);
+        var definition = new CardDefinition(
+            "horn", "Horn", 0, "Neutral", "Upgrade", "Special",
+            [Row.Melee], "Melee upgrade");
+        var firstUpgrade = definition.CreateInstance(Row.Melee);
+        var replacement = definition.CreateInstance(Row.Melee);
+        var filler = new Card("filler", "Filler", 1, Row.Melee);
+        game.AddToDeck(first, firstUpgrade);
+        game.AddToDeck(first, replacement);
+        game.AddToDeck(second, filler);
+
+        game.Draw(first);
+        game.Draw(first);
+        game.Play(first, firstUpgrade);
+        game.EndTurn();
+        game.Draw(second);
+        game.Play(second, filler);
+        game.EndTurn();
+        game.Play(first, replacement);
+
+        Assert.Empty(first.Field);
+        Assert.Contains(firstUpgrade, first.Graveyard);
+        Assert.Contains(replacement, first.Upgrades);
+        Assert.Empty(second.Upgrades);
+        game.ValidateCardZones();
+
+        game.Pass(first);
+        game.Pass(second);
+
+        Assert.Empty(first.Upgrades);
+        Assert.Contains(replacement, first.Graveyard);
+        game.ValidateCardZones();
+    }
+
+
 }
