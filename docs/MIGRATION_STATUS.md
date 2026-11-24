@@ -13,7 +13,7 @@
 - Semantic validation for duplicate identifiers, numeric ranges, valid rows, and effect references, including forward references.
 - Atomic compilation: invalid programs never publish partial card/effect catalogs.
 - Engine-owned effect execution with explicit duration, operation, target scope, and source-instance identity.
-- Instant, round-bound, and source-bound power modifiers; persistent auras update existing and subsequently played cards, and are removed when their source leaves the field, while round-bound modifiers are removed during round cleanup.
+- Instant, round-bound, and source-bound power modifiers; persistent auras update existing and subsequently played cards, and are removed when their source leaves the field, while round-bound modifiers survive card movement/destruction and are removed from every registered instance during round cleanup.
 - Weather-style auras can target both players' matching row; upgrade-style auras can target their owner's matching row.
 - Power is derived from base power and ordered modifiers rather than destructively overwriting base power.
 - Console sample compiles DSL, creates two decks, alternates turns, executes effects through the compiled catalog, and resolves a sample round.

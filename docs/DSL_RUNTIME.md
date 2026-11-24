@@ -72,7 +72,7 @@ Collection expressions include Find, Add, Push, Remove, SendBottom, Pop, Shuffle
 
 Card member access preserves the legacy Owner property as a Player, exposes OwnerId separately, and represents Range as a read-only collection of allowed row names (with Count and index access). Row identifies the instance's selected row; Name, Description, Power, Faction, Type, Rank, DefinitionId, and EffectId are also available. The context exposes OtherPlayer alongside the opponent's zone collections.
 
-Card Power assignments are implemented as round-scoped Set modifiers and are removed during round cleanup. Instant modifiers remain after their source leaves the field; source-bound auras are removed when their source leaves the field.
+Card Power assignments are implemented as round-scoped Set modifiers and are removed during round cleanup, even if the affected card leaves the field or is destroyed before the round ends. Instant modifiers remain after their source leaves the field; source-bound auras are removed when their source leaves the field.
 
 ## Verification boundary
 
