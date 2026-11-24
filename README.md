@@ -48,6 +48,6 @@ dotnet run --project src/Gwent.Console -- examples/starter.gwent
 dotnet run --project src/Gwent.Console -- --interactive examples/starter.gwent
 ```
 
-Interactive commands: `hand`, `board`, `status`, `draw`, `play <index>`, `end`, `pass`, `help`, and `quit`. During setup, each player may enter up to two hand indexes to mulligan.
+Interactive commands: `hand`, `board`, `status`, `draw`, `play <index> [Melee|Ranged|Siege]`, `end`, `pass`, `help`, and `quit`. During setup, each player may enter up to two hand indexes to mulligan.
 
 The solution targets .NET 10 (net10.0).

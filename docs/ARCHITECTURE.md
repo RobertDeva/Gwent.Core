@@ -14,7 +14,7 @@ Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity rem
 - A validated deck is loaded only into an empty player; its leader remains deck metadata rather than entering the shuffled card pile.
 - Match initialization shuffles both validated decks and deals ten cards to each player. Each player may exchange at most two distinct hand instances during the mulligan phase; the phase closes on the first normal turn action, and hands cannot exceed ten cards.
 - Game validates every zone transition and active-player operation.
-- The field is divided into Melee, Ranged, and Siege rows; scores are derived from board contents.
+- The field is divided into Melee, Ranged, and Siege rows; scores are derived from board contents. Cards with multiple allowed rows choose their actual row at play time, and the engine rejects disallowed placements.
 - Passing ends a player's participation in the current round. Both players must pass to resolve it.
 - A round winner earns one point; a tied round awards one point to each player. Field cards then move to graveyards.
 - The match ends when a player reaches two round points or the third round resolves.

@@ -3,7 +3,7 @@
 ## Implemented
 
 - .NET 10 solution with Engine, Compiler, Console, and unit/integration test projects.
-- Reusable card definitions and independent physical instances.
+- Reusable card definitions and independent physical instances. Multi-row cards retain their allowed-row set and the player selects a valid row when playing; invalid row choices leave the card in hand.
 - Immutable DeckDefinition validates a leader, at least 25 cards, faction consistency, and per-entry row legality. Repeated card definitions are permitted and create separate physical instances; Game.LoadDeck loads the validated list and keeps the leader outside the card pile.
 - Game.InitializeMatch shuffles both validated decks and deals ten initial cards to each player. Game.Mulligan exchanges up to two distinct hand instances per player, tracks the limit across calls, and preserves ownership/zone invariants. Normal turn actions close the mulligan phase; Game.Draw enforces the ten-card hand limit.
 - Deck, hand, Melee/Ranged/Siege field rows, and graveyard with validated transitions. An active player can destroy a card on either player's field; the card enters its owner's graveyard and source-bound effects are deactivated.
