@@ -62,4 +62,25 @@ public sealed class RuntimeSelectorTests
         Assert.Throws<InvalidOperationException>(() =>
             RuntimeSourceResolver.Resolve(context, "parent"));
     }
+
+    [Fact]
+    public void SemanticAnalyzerAcceptsGraveyardSelectorSupportedByRuntime()
+    {
+        var catalog = new RuntimeEffectCatalog([
+            new RuntimeEffectDefinition("inspect", [], [])
+        ]);
+        var invocation = new RuntimeEffectInvocation(
+            "inspect",
+            new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector(
+                "graveyard",
+                new LiteralExpression(RuntimeValue.From(true))));
+
+        var diagnostics = new RuntimeTypeAnalyzer()
+            .AnalyzeActivations(catalog, [invocation]);
+
+        Assert.Empty(diagnostics);
+    }
+
+
 }

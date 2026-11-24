@@ -161,7 +161,7 @@ public sealed class RuntimeTypeAnalyzer
         bool isPostAction)
     {
         var allowedSources = new HashSet<string>(
-            ["board", "field", "otherField", "hand", "otherHand", "deck", "otherDeck", "parent"],
+            ["board", "field", "otherField", "hand", "otherHand", "deck", "otherDeck", "graveyard", "parent"],
             StringComparer.Ordinal);
         if (!allowedSources.Contains(selector.Source))
             Add($"Effect '{effectId}' uses unknown selector source '{selector.Source}'.", selector.Single);
