@@ -121,4 +121,18 @@ public sealed class MatchSetupTests
         Assert.Equal(10, first.Hand.Count);
         game.ValidateCardZones();
     }
+
+    [Fact]
+    public void RejectedPlayDoesNotCloseMulliganPhase()
+    {
+        var (game, first, _) = CreateInitializedGame();
+        var unowned = new Card("outside", "Outside", 1, Row.Melee);
+
+        Assert.Throws<InvalidOperationException>(() => game.Play(first, unowned));
+
+        Assert.Equal(1, game.Mulligan(first, [first.Hand[0]], new Random(11)));
+        game.ValidateCardZones();
+    }
+
+
 }

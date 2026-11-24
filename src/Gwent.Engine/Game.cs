@@ -615,12 +615,12 @@ public sealed class Game
     public void Play(Player player, Card card)
     {
         ValidateActivePlayer(player);
-        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(card);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Hand ||
-            !player.Hand.Any(existing => existing.InstanceId == card.InstanceId))
+            !player.Hand.Any(existing => ReferenceEquals(existing, card)))
             throw new InvalidOperationException("Only a card in the active player's hand can be played.");
         if (_hasPlayedThisTurn) throw new InvalidOperationException("A player can play only one card per turn.");
+        CloseMulliganPhase();
         player.PlayFromHand(card);
         _hasPlayedThisTurn = true;
         RefreshPersistentEffects();
@@ -629,14 +629,14 @@ public sealed class Game
     public void Destroy(Player player, Card card)
     {
         ValidateActivePlayer(player);
-        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(card);
         var owner = StringComparer.Ordinal.Equals(card.OwnerId, First.Id) ? First :
             StringComparer.Ordinal.Equals(card.OwnerId, Second.Id) ? Second :
             throw new InvalidOperationException("Card has no valid owner in this game.");
         if (card.Zone != CardZone.Field ||
-            !owner.Field.Any(existing => existing.InstanceId == card.InstanceId))
+            !owner.Field.Any(existing => ReferenceEquals(existing, card)))
             throw new InvalidOperationException("Only a card currently on either player's field can be destroyed.");
+        CloseMulliganPhase();
         DeactivateEffectsFrom(card);
         card.RemovePersistentModifiers();
         owner.MoveToGraveyard(card);
@@ -646,14 +646,14 @@ public sealed class Game
     public void ApplyEffect(Player player, Card card, CardEffect effect)
     {
         ValidateActivePlayer(player);
-        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(card);
         ArgumentNullException.ThrowIfNull(effect);
         if (card.OwnerId != player.Id || card.Zone != CardZone.Field ||
-            !player.Field.Any(existing => existing.InstanceId == card.InstanceId))
+            !player.Field.Any(existing => ReferenceEquals(existing, card)))
             throw new InvalidOperationException("Effects can only be applied by a card on the active player's field.");
 
         card.TryApplyEffect(effect);
+        CloseMulliganPhase();
         if (effect.Duration == EffectDuration.WhileSourceOnField)
         {
             _activeEffects.Add(new ActiveEffect(card, effect));
@@ -670,11 +670,11 @@ public sealed class Game
         EffectDuration duration = EffectDuration.UntilRoundEnd)
     {
         ValidateActivePlayer(player);
-        CloseMulliganPhase();
         ArgumentNullException.ThrowIfNull(target);
-        if (!First.Field.Concat(Second.Field).Any(card => card.InstanceId == target.InstanceId))
+        if (!First.Field.Concat(Second.Field).Any(card => ReferenceEquals(card, target)))
             throw new InvalidOperationException("Power modifiers can only target a card currently on the field.");
         target.ApplyRuntimeModifier(effectId, operation, amount, duration);
+        CloseMulliganPhase();
     }
 
     public void MoveCard(
