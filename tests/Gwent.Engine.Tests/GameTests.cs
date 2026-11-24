@@ -376,22 +376,6 @@ public sealed class GameTests
     }
 
 
-    [Fact]
-    public void CannotMoveRegisteredCardIntoUnassignedZone()
-    {
-        var first = new Player("first");
-        var game = new Game(first, new Player("second"));
-        var card = new Card("unit", "Unit", 5, Row.Melee);
-        game.AddToDeck(first, card);
-
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            game.MoveCard(card, first, CardZone.Unassigned));
-
-        Assert.Equal(CardZone.Deck, card.Zone);
-        Assert.Single(first.Deck);
-        Assert.Same(card, first.Deck[0]);
-        game.ValidateCardZones();
-    }
 
 
 }

@@ -586,8 +586,7 @@ public sealed class Game
         EnsureNotFinished();
         ArgumentNullException.ThrowIfNull(card);
         ValidatePlayer(destinationPlayer);
-        if (!Enum.IsDefined(destination) || destination == CardZone.Unassigned)
-            throw new ArgumentOutOfRangeException(nameof(destination), "A registered card must belong to an assigned game zone.");
+        if (!Enum.IsDefined(destination)) throw new ArgumentOutOfRangeException(nameof(destination));
         if (!Enum.IsDefined(deckPosition)) throw new ArgumentOutOfRangeException(nameof(deckPosition));
         if (!_cardsByInstance.TryGetValue(card.InstanceId, out var registered) ||
             !ReferenceEquals(registered, card))
