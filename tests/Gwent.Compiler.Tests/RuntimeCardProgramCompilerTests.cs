@@ -326,4 +326,49 @@ public sealed class RuntimeCardProgramCompilerTests
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Message.Contains("unknown range", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void PlayRejectsForgedCardMetadataBeforeChangingItsZone()
+    {
+        var player = new Gwent.Engine.Player("p1");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("p2"));
+        var forged = new Gwent.Engine.Card("unit", "Forged Unit", 99, Gwent.Engine.Row.Melee);
+        game.AddToDeck(player, forged);
+        game.Draw(player);
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", []);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+
+        Assert.Throws<ArgumentException>(() => program.Play(game, player, forged));
+        Assert.Equal(Gwent.Engine.CardZone.Hand, forged.Zone);
+        Assert.Contains(forged, player.Hand);
+        Assert.Empty(player.Field);
+    }
+
+    [Fact]
+    public void ActivationRejectsForgedCardMetadata()
+    {
+        var player = new Gwent.Engine.Player("p1");
+        var game = new Gwent.Engine.Game(player, new Gwent.Engine.Player("p2"));
+        var forged = new Gwent.Engine.Card("unit", "Forged Unit", 99, Gwent.Engine.Row.Melee);
+        game.AddToDeck(player, forged);
+        game.MoveCard(forged, player, Gwent.Engine.CardZone.Field);
+        var invocation = new RuntimeEffectInvocation(
+            "noop", new Dictionary<string, RuntimeExpression>(),
+            new RuntimeSelector("field", new LiteralExpression(RuntimeValue.From(false))));
+        var definition = new RuntimeCardDefinition(
+            "unit", "Unit", new LiteralExpression(RuntimeValue.From(1)),
+            "Northern", "Unit", "Silver", ["Melee"], "Unit", [invocation]);
+        var program = new RuntimeCardProgram(
+            new RuntimeEffectCatalog([new RuntimeEffectDefinition("noop", [], [])]),
+            new Dictionary<string, RuntimeCardDefinition> { ["unit"] = definition });
+        var context = new RuntimeExecutionContext(player, forged, game);
+
+        Assert.Throws<ArgumentException>(() => program.Activate(forged, 0, context));
+    }
+
+
 }

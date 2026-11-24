@@ -57,6 +57,23 @@ public sealed class RuntimeCardProgram
     public RuntimeEffectCatalog Effects { get; }
     public IReadOnlyDictionary<string, RuntimeCardDefinition> Cards { get; }
 
+    private static void ValidateCardMatchesDefinition(
+        Gwent.Engine.Card card,
+        RuntimeCardDefinition definition)
+    {
+        var expected = definition.ToEngineDefinition();
+        if (!StringComparer.Ordinal.Equals(card.Name, expected.Name) ||
+            card.BasePower != expected.BasePower ||
+            !StringComparer.Ordinal.Equals(card.Faction, expected.Faction) ||
+            !StringComparer.Ordinal.Equals(card.Type, expected.Type) ||
+            !StringComparer.Ordinal.Equals(card.Rank, expected.Rank) ||
+            !StringComparer.Ordinal.Equals(card.Description, expected.Description) ||
+            !card.AllowedRows.SequenceEqual(expected.AllowedRows))
+            throw new ArgumentException(
+                $"Card instance does not match compiled definition '{definition.Id}'.",
+                nameof(card));
+    }
+
     public Gwent.Engine.Card CreateCardInstance(string definitionId, Gwent.Engine.Row row)
     {
         if (!Cards.TryGetValue(definitionId, out var definition))
@@ -78,6 +95,7 @@ public sealed class RuntimeCardProgram
             throw new ArgumentOutOfRangeException(nameof(instructionLimit));
         if (!Cards.TryGetValue(card.DefinitionId, out var definition))
             throw new KeyNotFoundException($"No compiled card definition exists for '{card.DefinitionId}'.");
+        ValidateCardMatchesDefinition(card, definition);
         if (!game.ContainsCard(card))
             throw new ArgumentException("Card instance does not belong to the supplied game.", nameof(card));
 
@@ -108,6 +126,7 @@ public sealed class RuntimeCardProgram
             throw new ArgumentException("The trigger player must own the activation card.", nameof(context));
         if (!Cards.TryGetValue(card.DefinitionId, out var definition))
             throw new KeyNotFoundException($"Card definition '{card.DefinitionId}' is not declared.");
+        ValidateCardMatchesDefinition(card, definition);
         if (activationIndex < 0 || activationIndex >= definition.Activations.Count)
             throw new ArgumentOutOfRangeException(nameof(activationIndex));
         return new RuntimeEffectExecutor(Effects).Execute(
