@@ -6,7 +6,7 @@
 - Reusable card definitions and independent physical instances. Multi-row cards retain their allowed-row set and the player selects a valid row when playing; invalid row choices leave the card in hand.
 - Immutable DeckDefinition validates a leader, at least 25 cards, faction consistency, and per-entry row legality. Repeated card definitions are permitted and create separate physical instances; Game.LoadDeck loads the validated list and keeps the leader outside the card pile.
 - Game.InitializeMatch shuffles both validated decks and deals ten initial cards to each player. Game.Mulligan exchanges up to two distinct hand instances per player, tracks the limit across calls, and preserves ownership/zone invariants. Normal turn actions close the mulligan phase; Game.Draw enforces the ten-card hand limit.
-- Deck, hand, Melee/Ranged/Siege field rows, and graveyard with validated transitions. An active player can destroy a card on either player's field; the card enters its owner's graveyard and source-bound effects are deactivated.
+- Deck, hand, Melee/Ranged/Siege field rows, dedicated weather and upgrade zones, and graveyard with validated transitions. Weather is unique per row across both players; upgrades are unique per owner and row. Special-zone cards move to their owners' graveyards on replacement or round cleanup. An active player can destroy a card on either player's field; the card enters its owner's graveyard and source-bound effects are deactivated.
 - Row and total scoring derived from board state.
 - Active-player turns, passing, round resolution, round points, and best-of-three match completion.
 - Staged compiler pipeline: lexer, token stream with source locations, parser, typed declaration AST, semantic analyzer, immutable compilation result, and effect executor.
@@ -16,7 +16,7 @@
 - Atomic compilation: invalid programs never publish partial card/effect catalogs.
 - Engine-owned effect execution with explicit duration, operation, target scope, and source-instance identity.
 - Instant, round-bound, and source-bound power modifiers; persistent auras update existing and subsequently played cards, and are removed when their source leaves the field, while round-bound modifiers survive card movement/destruction and are removed from every registered instance during round cleanup.
-- Weather-style auras can target both players' matching row; upgrade-style auras can target their owner's matching row.
+- Weather-style auras can target both players' matching row; upgrade-style auras can target their owner's matching row. Gold units are excluded from row-scoped modifiers.
 - Power is derived from base power and ordered modifiers rather than destructively overwriting base power.
 - Console sample compiles DSL, creates two decks, alternates turns, executes effects through the compiled catalog, and resolves a sample round.
 - The runtime DSL parses reusable effect blocks, typed parameters, action expressions, while/for statements, card activation selectors, predicates, and nested PostAction; it performs static type and reference checks before producing a runtime catalog. The graveyard selector source is accepted consistently by semantic analysis and runtime resolution.
@@ -33,8 +33,8 @@
 
 - The compatibility grammar still supports card/effect declarations and simple boost metadata. The extended runtime DSL supports both a single combined source file and separate effect/card source inputs through DslCompiler.CompileRuntimeProgram.
 - Collection semantics are integrated and tested for deck/hand ordering, removal, Pop/Push/SendBottom, and mutation-safe iteration; broader parity testing remains for other zones and combinations of operations.
-- Player-driven console interaction and the complete acceptance scenario.
-- Card rank/type filtering (for example, weather affecting only the appropriate unit ranks), special-card zones, leader effects, round-persistence exceptions, and complete tie/round rules remain to be specified and implemented.
+- Complete acceptance scenario and remaining native-effect coverage.
+- Leader effects, clear-weather/cleanse behavior, remaining native effects, temporary round statuses, and complete tie/round edge cases remain to be specified and implemented.
 - The historical first project also contains temporary unit statuses (buff/debuff) reset at round cleanup; these must be modeled separately from source-bound row auras.
 
 Historical Unity code is used as a source of domain and language ideas, not copied wholesale. A language capability is considered migrated only after its syntax, semantic checks, runtime behavior, and tests exist.

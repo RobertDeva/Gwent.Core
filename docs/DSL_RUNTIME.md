@@ -56,7 +56,7 @@ card vanguard {
 
 A card activation references a reusable effect by its Type value. Arguments bind by parameter name and are checked against declared parameter types. A selector contains:
 
-- Source: board, field, otherField, hand, otherHand, deck, otherDeck, graveyard, or parent inside a PostAction.
+- Source: board, field, otherField, hand, otherHand, deck, otherDeck, graveyard, weather, upgrades, otherWeather, otherUpgrades, or parent inside a PostAction.
 - Single: Boolean expression; when true, only the first matching card is selected.
 - Predicate: optional lambda expression whose body must return Boolean.
 
@@ -66,13 +66,13 @@ PostAction declarations are recursively nestable to any depth supported by the s
 
 Expressions support typed literals, identifiers, parentheses, arithmetic, comparisons, equality, Boolean operators, string concatenation, member access, collection indexers, lambda predicates, and variable assignment.
 
-The runtime context exposes context.TriggerPlayer, context.OtherPlayer, context.SourceCard, context.Game, context.Hand, context.Deck, context.Field, context.Graveyard, context.Board, and the corresponding opponent collections when a game is available. The legacy helper functions HandOfPlayer(player), DeckOfPlayer(player), FieldOfPlayer(player), and GraveyardOfPlayer(player) are also supported and return the corresponding player-zone collection.
+The runtime context exposes context.TriggerPlayer, context.OtherPlayer, context.SourceCard, context.Game, context.Hand, context.Deck, context.Field, context.Graveyard, context.Weather, context.Upgrades, context.Board, and the corresponding opponent collections (including OtherWeather and OtherUpgrades) when a game is available. Player values also expose Weather and Upgrades. The legacy helper functions HandOfPlayer(player), DeckOfPlayer(player), FieldOfPlayer(player), and GraveyardOfPlayer(player) are also supported and return the corresponding player-zone collection.
 
 Collection expressions include Find, Add, Push, Remove, SendBottom, Pop, Shuffle, and Count. Count is available as both a property (`collection.Count`) and a no-argument method (`collection.Count()`). Collections obtained from player zones are live zone views: their mutations are routed through Game.MoveCard, including source-effect cleanup and ownership transfer. An effect can move a selected unit to its actual owner's graveyard with `unit.Owner.Graveyard.Add(unit)`; this also supports effects that remove an opponent's unit without assigning it to the trigger player's graveyard. Pop temporarily detaches its card; every top-level effect execution verifies that all registered card instances finish in exactly one valid game zone. Collections without a game context are read-only snapshots. Filtered target lists and locally-created collections remain independent snapshots.
 
 Card member access preserves the legacy Owner property as a Player, exposes OwnerId separately, and represents Range as a read-only collection of allowed row names (with Count and index access). Row identifies the instance's selected row; Name, Description, Power, Faction, Type, Rank, DefinitionId, and EffectId are also available. The context exposes OtherPlayer alongside the opponent's zone collections.
 
-Card Power assignments are implemented as round-scoped Set modifiers and are removed during round cleanup, even if the affected card leaves the field or is destroyed before the round ends. Instant modifiers remain after their source leaves the field; source-bound auras are removed when their source leaves the field.
+Card Power assignments are implemented as round-scoped Set modifiers and are removed during round cleanup, even if the affected card leaves the field or is destroyed before the round ends. Instant modifiers remain after their source leaves the field; source-bound auras are removed when their source leaves the field, weather, or upgrade zone.
 
 ## Verification boundary
 

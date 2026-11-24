@@ -16,14 +16,16 @@ Gwent.Core is a framework-independent domain engine and DSL toolchain. Unity rem
 - Game validates every zone transition and active-player operation.
 - The field is divided into Melee, Ranged, and Siege rows; scores are derived from board contents. Cards with multiple allowed rows choose their actual row at play time, and the engine rejects disallowed placements.
 - Passing ends a player's participation in the current round. Both players must pass to resolve it.
-- A round winner earns one point; a tied round awards one point to each player. Field cards then move to graveyards.
+- A round winner earns one point; a tied round awards one point to each player. Field, weather, and upgrade cards then move to their owners' graveyards.
 - The match ends when a player reaches two round points or the third round resolves.
 - Compiled effect data is converted into an Engine effect value and executed by Game with explicit player/card context.
 - Effects declare duration, operation, and target scope. Instant modifiers remain after their source leaves; field-bound effects are recalculated from active sources and removed when the source leaves the field or the round ends. UntilRoundEnd modifiers remain on their card instance even if it leaves the field or is destroyed, and are cleared from every registered instance only during round cleanup.
 - Persistent modifiers retain source-instance identity and are derived separately from base power, so removing one source does not erase other modifiers.
 - Runtime DSL PostActions form a recursive chain. Each level selects from the preceding level's targets, while arguments and selectors are evaluated in the parent's lexical scope; semantic analysis carries ancestor parameter types through the same chain.
 - Row auras are applied to cards already present and cards entering the row later. The current model supports the source card, its owner's row, or both players' matching row.
-- An effect can only target its assigned card while it is on the active player's field, and each effect ID can be applied once per instance.
+- Weather cards occupy their owner's weather zone but affect both players' matching row; a new weather card replaces the existing weather card in that row. Upgrade cards occupy their owner's upgrade zone and replace that player's existing upgrade in the same row.
+- Gold units are immune to row-scoped weather and upgrade modifiers.
+- An effect can only target its assigned card while it is in one of the active player's effect zones, and each effect ID can be applied once per instance.
 - Compiler diagnostics are per compilation and invalid source publishes no partial catalogue.
 
 ## Compiler stages
