@@ -404,4 +404,40 @@ public sealed class RuntimeZoneCollectionTests
         Assert.Same(card, Assert.Single(player.Hand));
     }
 
+
+    [Theory]
+    [InlineData(CardZone.Deck)]
+    [InlineData(CardZone.Hand)]
+    [InlineData(CardZone.Field)]
+    [InlineData(CardZone.Weather)]
+    [InlineData(CardZone.Upgrade)]
+    [InlineData(CardZone.Graveyard)]
+    public void PopKeepsDetachedCardRegisteredAndAllowsReentry(CardZone zone)
+    {
+        var player = new Player("p1");
+        var opponent = new Player("p2");
+        var game = new Game(player, opponent);
+        var card = new Card("unit", "Unit", 3, Row.Melee);
+        game.AddToDeck(player, card);
+        if (zone != CardZone.Deck)
+            game.MoveCard(card, player, zone);
+
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        var collection = RuntimeCardCollection.ForZone(context, player, zone);
+
+        var popped = collection.Pop();
+
+        Assert.Same(card, popped);
+        Assert.Equal(CardZone.Unassigned, card.Zone);
+
+        // Unassigned is a transient state while a DSL operation is in flight.
+        // Reinsert the popped card before validating the complete game state.
+        game.MoveCard(card, opponent, CardZone.Hand);
+
+        Assert.Equal(CardZone.Hand, card.Zone);
+        Assert.Equal(opponent.Id, card.OwnerId);
+        Assert.Contains(card, opponent.Hand);
+        game.ValidateCardZones();
+    }
 }
