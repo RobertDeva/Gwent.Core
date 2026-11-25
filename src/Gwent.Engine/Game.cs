@@ -838,21 +838,9 @@ public sealed class Game
             (Cards: Second.Upgrades, Owner: Second, Zone: CardZone.Upgrade),
             (Cards: Second.Graveyard, Owner: Second, Zone: CardZone.Graveyard)
         };
-        // Pop() and explicit MoveCard(..., Unassigned) detach a registered
-        // instance from its zone without removing it from the game registry.
-        // Include those instances in the invariant check so temporary detached
-        // cards remain valid while still being checked for identity and ownership.
-        var unassignedEntries = _cardsByInstance.Values
-            .Where(card => card.Zone == CardZone.Unassigned)
-            .Select(card => (
-                Card: card,
-                Owner: StringComparer.Ordinal.Equals(card.OwnerId, First.Id) ? First : Second,
-                Zone: CardZone.Unassigned));
-
         var entries = zones
             .SelectMany(zone => zone.Cards.Select(card =>
                 (Card: card, zone.Owner, zone.Zone)))
-            .Concat(unassignedEntries)
             .ToArray();
         var grouped = entries.GroupBy(entry => entry.Card.InstanceId).ToArray();
 
