@@ -354,4 +354,54 @@ public sealed class RuntimeZoneCollectionTests
         Assert.False(cards.Select(card => card.InstanceId)
             .SequenceEqual(player.Deck.Select(card => card.InstanceId)));
     }
+
+    [Theory]
+    [InlineData(CardZone.Weather)]
+    [InlineData(CardZone.Upgrade)]
+    public void PushAndSendBottomPreserveOrderingInSpecialZoneCollections(CardZone zone)
+    {
+        var player = new Player("p1");
+        var game = new Game(player, new Player("p2"));
+        var first = new Card("first", "First", 1, Row.Melee);
+        var second = new Card("second", "Second", 2, Row.Ranged);
+        game.AddToDeck(player, first);
+        game.AddToDeck(player, second);
+        game.MoveCard(first, player, zone);
+        game.MoveCard(second, player, zone);
+
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee), game);
+        context.Scope.Define("second", RuntimeValue.From(second));
+        var member = zone == CardZone.Weather ? "Weather" : "Upgrades";
+
+        new ExpressionParser($"context.{member}.SendBottom(second)").Parse()!.Evaluate(context);
+        var cards = zone == CardZone.Weather ? player.Weather : player.Upgrades;
+        Assert.Equal(new[] { second, first }, cards);
+
+        new ExpressionParser($"context.{member}.Push(second)").Parse()!.Evaluate(context);
+        Assert.Equal(new[] { first, second }, cards);
+        game.ValidateCardZones();
+    }
+
+    [Fact]
+    public void ZoneCollectionWithoutGameIsReadOnlySnapshot()
+    {
+        var player = new Player("p1");
+        var card = new Card("unit", "Unit", 1, Row.Melee);
+        var game = new Game(player, new Player("p2"));
+        game.AddToDeck(player, card);
+        game.Draw(player);
+        var context = new RuntimeExecutionContext(player,
+            new Card("source", "Source", 1, Row.Melee));
+        var hand = RuntimeCardCollection.ForZone(context, player, CardZone.Hand);
+
+        Assert.Same(card, Assert.Single(hand.Cards));
+        Assert.Throws<InvalidOperationException>(() => hand.Add(
+            new Card("other", "Other", 1, Row.Melee)));
+        Assert.Throws<InvalidOperationException>(() => hand.Push(card));
+        Assert.Throws<InvalidOperationException>(() => hand.Remove(card));
+        Assert.Throws<InvalidOperationException>(() => hand.Shuffle(new Random(1)));
+        Assert.Same(card, Assert.Single(player.Hand));
+    }
+
 }
