@@ -430,8 +430,9 @@ public sealed class RuntimeZoneCollectionTests
 
         Assert.Same(card, popped);
         Assert.Equal(CardZone.Unassigned, card.Zone);
-        game.ValidateCardZones();
 
+        // Unassigned is a transient state while a DSL operation is in flight.
+        // Reinsert the popped card before validating the complete game state.
         game.MoveCard(card, opponent, CardZone.Hand);
 
         Assert.Equal(CardZone.Hand, card.Zone);
