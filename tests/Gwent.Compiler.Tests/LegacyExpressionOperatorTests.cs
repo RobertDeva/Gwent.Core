@@ -43,4 +43,54 @@ public sealed class LegacyExpressionOperatorTests
 
         Assert.Equal(5, expression!.Evaluate(context).AsNumber());
     }
+
+    [Fact]
+    public void ArithmeticOperatorsRespectPrecedenceAndParentheses()
+    {
+        var context = new RuntimeExecutionContext(new Player("p1"),
+            new Card("source", "Source", 1, Row.Melee));
+
+        Assert.Equal(14, new ExpressionParser("2 + 3 * 4").Parse()!
+            .Evaluate(context).AsNumber());
+        Assert.Equal(20, new ExpressionParser("(2 + 3) * 4").Parse()!
+            .Evaluate(context).AsNumber());
+    }
+
+    [Fact]
+    public void RelationalEqualityAndLogicalOperatorsRespectPrecedence()
+    {
+        var context = new RuntimeExecutionContext(new Player("p1"),
+            new Card("source", "Source", 1, Row.Melee));
+
+        Assert.True(new ExpressionParser("1 + 2 > 2 && 4 == 4").Parse()!
+            .Evaluate(context).AsBoolean());
+        Assert.True(new ExpressionParser("true || false && false").Parse()!
+            .Evaluate(context).AsBoolean());
+    }
+
+    [Fact]
+    public void AssignmentIsRightAssociativeAndReturnsAssignedValue()
+    {
+        var context = new RuntimeExecutionContext(new Player("p1"),
+            new Card("source", "Source", 1, Row.Melee));
+        context.Scope.Define("first", RuntimeValue.From(0));
+        context.Scope.Define("second", RuntimeValue.From(0));
+
+        var assignment = new ExpressionParser("first = second = 7").Parse();
+
+        Assert.Equal(7, assignment!.Evaluate(context).AsNumber());
+        Assert.Equal(7, context.Scope.Resolve("first").AsNumber());
+        Assert.Equal(7, context.Scope.Resolve("second").AsNumber());
+    }
+
+    [Fact]
+    public void ExponentiationIsRightAssociative()
+    {
+        var context = new RuntimeExecutionContext(new Player("p1"),
+            new Card("source", "Source", 1, Row.Melee));
+
+        Assert.Equal(512, new ExpressionParser("2 ^ 3 ^ 2").Parse()!
+            .Evaluate(context).AsNumber());
+    }
+
 }
